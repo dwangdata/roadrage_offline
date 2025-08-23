@@ -1,55 +1,58 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Bike Roughness Mapper MVP</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet"/>
-  <link rel="stylesheet" href="style.css"/>
-
-  <!-- Leaflet (no integrity attrs) -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Rumble - The Waze for Potholes</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="style.css" />
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 </head>
 <body>
-  <div class="container">
-    <h1>Bike Roughness Mapper</h1>
-    <div id="status">Ready to record.</div>
-    <div class="controls">
-      <button id="startButton">Start Ride</button>
-      <button id="stopButton" disabled>Stop Ride</button>
-    </div>
-    <div id="dataPointsCounter">Data Points: 0</div>
+    <div class="container">
+        <h1>Rumble Mapper</h1>
+        <div id="status">Initializing...</div>
+        <div class="controls">
+            <button id="startButton">Start Ride</button>
+            <button id="stopButton" disabled>Stop Ride</button>
+        </div>
+        <div id="dataPointsCounter">Data Points: 0</div>
 
-    <!-- Main map -->
-    <div id="map"></div>
+        <!-- Main map -->
+        <div id="map"></div>
 
-    <!-- Live vibration chart -->
-    <canvas id="vibrationChart" height="200" style="width:100%; margin-bottom:20px;"></canvas>
+        <!-- Live vibration chart -->
+        <canvas id="vibrationChart" height="200" style="width:100%; margin-bottom:20px;"></canvas>
 
-    <h2>Past Rides</h2>
-    <ul id="pastRidesList"></ul>
-  </div>
-
-  <!-- Ride Detail Overlay -->
-  <div id="rideDetailView" class="hidden">
-    <div class="detail-header">
-      <h3>Ride Details</h3>
-      <button id="closeDetailButton">Close</button>
+        <h2>Past Rides (Local)</h2>
+        <ul id="pastRidesList"></ul>
     </div>
 
-    <!-- Recap map -->
-    <div id="recapMap" style="height:300px; width:100%; margin-bottom:20px;"></div>
+    <!-- Ride Detail Overlay -->
+    <div id="rideDetailView" class="hidden">
+        <div class="detail-header">
+            <h3>Ride Details</h3>
+            <button id="closeDetailButton">Close</button>
+        </div>
+        <!-- Recap map -->
+        <div id="recapMap" style="height:300px; width:100%; margin-bottom:20px;"></div>
+        <!-- Recap chart -->
+        <canvas id="recapChart" height="200" style="width:100%; margin-bottom:20px;"></canvas>
+        <pre id="detailContent"></pre>
+    </div>
 
-    <!-- Recap chart -->
-    <canvas id="recapChart" height="200" style="width:100%; margin-bottom:20px;"></canvas>
+    <!-- External Libraries -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+    
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
 
-    <pre id="detailContent"></pre>
-  </div>
-
-  <!-- Leaflet, Chart.js, Date Adapter, then our script -->
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
-  <script src="script.js"></script>
+    <!-- Your Application Script -->
+    <script src="script.js"></script>
 </body>
 </html>
