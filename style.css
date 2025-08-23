@@ -77,6 +77,16 @@ button#stopButton:not(:disabled):hover {
     transform: translateY(-1px);
 }
 
+button#deleteDataButton {
+    background-color: #ffc107; /* Amber/Warning color */
+    color: #212529;
+}
+
+button#deleteDataButton:not(:disabled):hover {
+    background-color: #e0a800;
+    transform: translateY(-1px);
+}
+
 button:disabled {
     background-color: #cccccc;
     cursor: not-allowed;
@@ -174,3 +184,4 @@ button:disabled {
         gap: 10px;
     }
 }
+
