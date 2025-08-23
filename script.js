@@ -15,7 +15,7 @@ let vibrationChart, chartDataset = [];
 let recapMap, recapRidePath, recapHistoricalLayer, recapChart, recapHighlight;
 
 // DOM refs
-let statusDiv, startButton, stopButton, dataPointsCounter;
+let statusDiv, startButton, stopButton, dataPointsCounter, deleteDataButton;
 let pastRidesList, rideDetailView, detailContent, closeDetailButton;
 
 // Constants
@@ -52,7 +52,7 @@ function openDb() {
       db = e.target.result;
       resolve(db);
       loadPastRides();
-      showAllHistoricalData(); // <-- MODIFIED: Show global map on load
+      showAllHistoricalData();
     };
     request.onerror = e => {
       console.error('DB error', e);
@@ -223,7 +223,7 @@ async function processCombinedDataPoint() {
   statusDiv.textContent = `Lat ${latitude.toFixed(4)}, Lon ${longitude.toFixed(4)}, Rough ${roughness.toFixed(2)}`;
 }
 
-// --- RoughnessMap Management (Optimized) ---
+// --- RoughnessMap Management ---
 async function updateRoughnessMap(dp) {
   const geoId = getGeoId(dp.latitude, dp.longitude);
   const tx = db.transaction('RoughnessMap', 'readwrite');
@@ -232,7 +232,6 @@ async function updateRoughnessMap(dp) {
   const existingRecord = await promisifiedDbRequest(store.get(geoId));
 
   if (existingRecord) {
-    // This location exists, update it with the latest data
     const updatedRecord = {
       ...existingRecord,
       roughnessValue: dp.roughnessValue,
@@ -240,7 +239,6 @@ async function updateRoughnessMap(dp) {
     };
     await promisifiedDbRequest(store.put(updatedRecord));
   } else {
-    // This is a new location, add it
     const newRecord = {
       geoId: geoId,
       latitude: dp.latitude,
@@ -294,7 +292,6 @@ async function updateHistoricalDisplay(lat, lon, layerGroup, targetMap) {
   await tx.complete;
 }
 
-// --- New Function: Show All Historical Data ---
 async function showAllHistoricalData() {
   if (!db || !historicalRoughnessLayer) return;
   historicalRoughnessLayer.clearLayers();
@@ -319,7 +316,6 @@ async function showAllHistoricalData() {
 }
 
 // --- Highlight on Hover ---
-// live
 function highlightPointOnMap(idx) {
   if (!chartDataset[idx]) return;
   const dp = chartDataset[idx].meta;
@@ -329,7 +325,6 @@ function highlightPointOnMap(idx) {
   }).addTo(map);
   setTimeout(() => map.removeLayer(recapHighlight), 3000);
 }
-// recap
 function highlightRecapPointOnMap(idx) {
   const data = recapChart?.data?.datasets[0]?.data;
   if (!data || !data[idx]) return;
@@ -341,7 +336,7 @@ function highlightRecapPointOnMap(idx) {
   setTimeout(() => recapMap.removeLayer(recapHighlight), 3000);
 }
 
-// --- Start & Stop Ride ---
+// --- App Controls ---
 async function startRide() {
   if (currentRideId) return;
   currentRideId = Date.now();
@@ -391,7 +386,6 @@ async function startRide() {
   }));
   await tx.complete;
 
-  // reset live chart
   if (vibrationChart) {
     chartDataset.length = 0;
     vibrationChart.data.datasets[0].data = chartDataset;
@@ -447,9 +441,32 @@ async function stopRide() {
   if (currentRidePath) currentRidePath.setLatLngs([]);
   if (currentLocationMarker) map.removeLayer(currentLocationMarker);
 
-  showAllHistoricalData(); // <-- MODIFIED: Show global map after ride ends
+  showAllHistoricalData();
+  loadPastRies();
+}
 
-  loadPastRides();
+function deleteDatabase() {
+  const confirmation = confirm("⚠️ Are you sure you want to delete all ride data? This action cannot be undone.");
+
+  if (confirmation) {
+    statusDiv.textContent = 'Deleting database...';
+    const deleteRequest = indexedDB.deleteDatabase(DB_NAME);
+
+    deleteRequest.onsuccess = () => {
+      console.log("Database deleted successfully.");
+      window.location.reload();
+    };
+    
+    deleteRequest.onerror = (e) => {
+      console.error("Error deleting database:", e);
+      statusDiv.textContent = 'Error deleting database.';
+    };
+
+    deleteRequest.onblocked = () => {
+        console.warn("Database deletion blocked. Please close other tabs and try again.");
+        statusDiv.textContent = "Couldn't delete database. Please refresh and try again.";
+    };
+  }
 }
 
 // --- Past Rides & Recap ---
@@ -498,26 +515,20 @@ async function showRideDetails(rideId) {
     detailContent.textContent = 'No data for this ride.';
     return;
   }
-
-  // **Sort chronologically by timestamp** before charting
-  // ensure chronological order by timestamp
-  // 1) Sort chronologically
+  
   dps.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
     
-  // 2) Build chart points
   const chartData = dps.map(dp => ({
     x: new Date(dp.timestamp),
     y: dp.roughnessValue,
     meta: dp
   }));
     
-  // 3) Update recap chart
   if (recapChart) {
     recapChart.data.datasets[0].data = chartData;
     recapChart.update();
   }
 
-  // Populate recap map
   recapRidePath.setLatLngs([]);
   recapHistoricalLayer.clearLayers();
   dps.forEach(dp => {
@@ -535,7 +546,6 @@ async function showRideDetails(rideId) {
     updateHistoricalDisplay(last.latitude, last.longitude, recapHistoricalLayer, recapMap);
   }
 
-  // Fill textual details
   let txt = `Ride ID: ${rideRec.rideId}\n` +
             `Start: ${new Date(rideRec.startTime).toLocaleString()}\n` +
             `End: ${new Date(rideRec.endTime).toLocaleString()}\n` +
@@ -559,6 +569,7 @@ document.addEventListener('DOMContentLoaded', () => {
   statusDiv         = document.getElementById('status');
   startButton       = document.getElementById('startButton');
   stopButton        = document.getElementById('stopButton');
+  deleteDataButton  = document.getElementById('deleteDataButton');
   dataPointsCounter = document.getElementById('dataPointsCounter');
   pastRidesList     = document.getElementById('pastRidesList');
   rideDetailView    = document.getElementById('rideDetailView');
@@ -567,6 +578,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   startButton.addEventListener('click', startRide);
   stopButton.addEventListener('click', stopRide);
+  deleteDataButton.addEventListener('click', deleteDatabase);
   closeDetailButton.addEventListener('click', hideRideDetails);
 
   initializeMap();
