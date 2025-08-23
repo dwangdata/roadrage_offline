@@ -349,12 +349,15 @@ async function stopRide() {
             userId: currentUser.uid,
             startTime: firebase.firestore.Timestamp.fromMillis(currentRideId),
             endTime: firebase.firestore.Timestamp.now(),
-            dataPoints: currentRideDataPoints.map(dp => ({
+            // ... inside stopRide
+            dataPoints: currentRideDataPoints
+              .filter(dp => dp.latitude != null && dp.longitude != null && dp.roughnessValue != null)
+              .map(dp => ({
                 timestamp: firebase.firestore.Timestamp.fromMillis(dp.timestamp),
-                latitude: dp.latitude,
-                longitude: dp.longitude,
+                // Create a proper GeoPoint object for Firestore
+                location: new firebase.firestore.GeoPoint(dp.latitude, dp.longitude),
                 roughnessValue: dp.roughnessValue
-            }))
+              }))
         };
 
         try {
@@ -409,4 +412,5 @@ document.addEventListener('DOMContentLoaded', () => {
     firebaseAuth(); // Authenticate with Firebase
     initChart();
 });
+
 
