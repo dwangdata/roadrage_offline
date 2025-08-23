@@ -23,8 +23,8 @@ const DB_NAME = 'BikeRoughnessDB', DB_VERSION = 2;
 const DATA_INTERVAL_MS = 3000, HIST_RADIUS = 150, PROXIMITY_RADIUS = 10;
 const HPF_ALPHA = 0.8;
 const ROUGH_THRESHOLDS = [0, 3, 6, 9, 15, 21, 30];
+// Using a more vibrant color scheme for better visibility
 const ROUGH_COLORS = ['#2ca02c', '#98df8a', '#ff7f0e', '#ffbb78', '#d62728', '#ff9896', '#9467bd', '#c5b0d5'];
-const GPS_ACCURACY_THRESHOLD = 50; // Don't accept GPS points with accuracy > 50 meters
 
 // --- IndexedDB Helper ---
 function promisifiedDbRequest(req) {
@@ -73,7 +73,8 @@ function initializeMap() {
     }).addTo(map);
     setTimeout(() => map.invalidateSize(), 200);
     historicalRoughnessLayer = L.layerGroup().addTo(map);
-    currentRidePath = L.polyline([], { weight: 6, opacity: 0.85 });
+    // This polyline is for the recap view, not the live ride
+    currentRidePath = L.polyline([], { weight: 5 });
     mapInitialized = true;
 }
 
@@ -178,19 +179,11 @@ function roughnessToColor(r) {
     return ROUGH_COLORS[ROUGH_COLORS.length - 1];
 }
 
-// --- Sensor Callbacks (with GPS Accuracy Filter) ---
-function gpsSuccess(pos) {
-    const accuracy = pos.coords.accuracy;
-    if (currentRideId) {
-        statusDiv.textContent = `Acquiring GPS signal (Accuracy: ${accuracy.toFixed(0)}m)`;
-    }
-    if (accuracy < GPS_ACCURACY_THRESHOLD) {
-        latestGpsPosition = pos;
-    }
-}
+// --- Sensor Callbacks ---
+function gpsSuccess(pos) { latestGpsPosition = pos; }
 function gpsError(err) {
     const msgs = { 1: 'Permission denied', 2: 'Unavailable', 3: 'Timed out' };
-    statusDiv.textContent = `GPS Error: ${msgs[err.code] || 'Unknown'}.`;
+    statusDiv.textContent = msgs[err.code] || 'GPS error';
     if (err.code === 1) stopRide();
 }
 function handleMotion(evt) {
@@ -204,7 +197,8 @@ function handleMotion(evt) {
 // --- Core Data Loop ---
 async function processCombinedDataPoint() {
     if (!currentRideId || !latestGpsPosition) {
-        return; // Wait for an accurate GPS signal
+        statusDiv.textContent = 'Waiting for GPS…';
+        return;
     }
     const { latitude, longitude, altitude, accuracy } = latestGpsPosition.coords;
     const timestamp = latestGpsPosition.timestamp;
@@ -221,7 +215,7 @@ async function processCombinedDataPoint() {
     currentRideDataPoints.push(dp);
     dataPointsCounter.textContent = `Data Points: ${currentRideDataPoints.length}`;
     
-    // This now updates the master map in real-time
+    // Update the master map in real-time
     await updateRoughnessMap(dp);
     updateMapDisplay(dp);
 
@@ -231,28 +225,23 @@ async function processCombinedDataPoint() {
         vibrationChart.update();
     }
 
-    statusDiv.textContent = `Recording | Lat ${latitude.toFixed(4)}, Lon ${longitude.toFixed(4)}, Rough ${roughness.toFixed(2)}`;
+    statusDiv.textContent = `Lat ${latitude.toFixed(4)}, Lon ${longitude.toFixed(4)}, Rough ${roughness.toFixed(2)}`;
 }
 
 // --- RoughnessMap Management ---
 async function updateRoughnessMap(dp) {
     const tx = db.transaction('RoughnessMap', 'readwrite');
     const store = tx.objectStore('RoughnessMap');
-    
-    // Use get() for better performance than getAll()
     const geoId = getGeoId(dp.latitude, dp.longitude);
-    const existing = await promisifiedDbRequest(store.get(geoId));
-
-    // Update if it's a new point, or if the new point is more recent
-    if (!existing || dp.timestamp > existing.lastUpdated) {
-        await promisifiedDbRequest(store.put({
-            geoId: geoId,
-            latitude: dp.latitude,
-            longitude: dp.longitude,
-            roughnessValue: dp.roughnessValue,
-            lastUpdated: dp.timestamp
-        }));
-    }
+    
+    await promisifiedDbRequest(store.put({
+        geoId: geoId,
+        latitude: dp.latitude,
+        longitude: dp.longitude,
+        roughnessValue: dp.roughnessValue,
+        lastUpdated: dp.timestamp
+    }));
+    
     await tx.complete;
 }
 
@@ -273,10 +262,6 @@ function updateMapDisplay(dp) {
         L.polyline([prev, latlng], { color: col, weight: 6, opacity: 0.85 }).addTo(map);
     }
     currentRidePath.addLatLng(latlng);
-
-    if (currentLocationMarker && currentLocationMarker.bringToFront) {
-        currentLocationMarker.bringToFront();
-    }
 }
 
 // --- Historical Overlay Helper ---
@@ -331,9 +316,13 @@ async function startRide() {
     dataPointsCounter.textContent = 'Data Points: 0';
     statusDiv.textContent = 'Requesting permissions…';
 
-    // Clear previous live ride visuals, but keep historical layer
-    map.removeLayer(currentRidePath);
-    currentRidePath = L.polyline([], { weight: 6, opacity: 0.85 }).addTo(map);
+    // Clear previous live ride visuals
+    map.eachLayer(layer => {
+        if (layer instanceof L.Polyline && layer !== currentRidePath) {
+             if (map.hasLayer(layer)) map.removeLayer(layer);
+        }
+    });
+    currentRidePath.setLatLngs([]);
     if (currentLocationMarker) {
         map.removeLayer(currentLocationMarker);
         currentLocationMarker = null;
@@ -379,7 +368,7 @@ async function startRide() {
 
     startButton.disabled = true;
     stopButton.disabled = false;
-    statusDiv.textContent = 'Recording… waiting for accurate GPS.';
+    statusDiv.textContent = 'Recording… waiting for GPS.';
 }
 
 async function stopRide() {
@@ -395,7 +384,6 @@ async function stopRide() {
         const ridesStore = tx.objectStore('rides');
         const dpStore = tx.objectStore('rideDataPoints');
 
-        // Save all individual data points for the recap view
         for (const dp of currentRideDataPoints) {
             await promisifiedDbRequest(dpStore.put(dp));
         }
