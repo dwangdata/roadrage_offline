@@ -226,6 +226,7 @@ function updateMapDisplay(dp) {
         L.polyline([prev, latlng], { color: col, weight: 6, opacity: 0.85 }).addTo(map).bringToFront();
     }
     currentRidePath.addLatLng(latlng);
+    // This ensures the marker icon itself is always on the highest layer.
     currentLocationMarker.bringToFront();
 
     // The historical display from local data is less important now,
@@ -408,3 +409,4 @@ document.addEventListener('DOMContentLoaded', () => {
     firebaseAuth(); // Authenticate with Firebase
     initChart();
 });
+
