@@ -44,6 +44,7 @@ h1, h2, h3 {
     justify-content: center;
     gap: 15px;
     margin-bottom: 20px;
+    flex-wrap: wrap;
 }
 
 button {
@@ -84,6 +85,17 @@ button#deleteDataButton {
 
 button#deleteDataButton:not(:disabled):hover {
     background-color: #e0a800;
+    transform: translateY(-1px);
+}
+
+/* New Bell button */
+button#bellButton {
+    background-color: #17a2b8; /* Teal */
+    color: white;
+}
+
+button#bellButton:not(:disabled):hover {
+    background-color: #138496;
     transform: translateY(-1px);
 }
 
@@ -184,4 +196,3 @@ button:disabled {
         gap: 10px;
     }
 }
-
