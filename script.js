@@ -633,7 +633,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Preload audio (recorded)
   bellSound = new Audio('sounds/bell.mp3');
-  voiceSound = new Audio('sounds/on_your_left.mp3');
+  voiceSound = new Audio('sounds/voice.mp3');
   bellSound.volume = 1.0;
   voiceSound.volume = 1.0;
 
@@ -644,4 +644,5 @@ document.addEventListener('DOMContentLoaded', () => {
   if (closeDetailButton)closeDetailButton.addEventListener('click', hideRideDetails);
   if (bellButton)       bellButton.addEventListener('click', window.playBell);
 });
+
 
