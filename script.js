@@ -18,8 +18,8 @@ let recapMap, recapRidePath, recapHistoricalLayer, recapChart, recapHighlight;
 let statusDiv, startButton, stopButton, dataPointsCounter, deleteDataButton, bellButton;
 let pastRidesList, rideDetailView, detailContent, closeDetailButton;
 
-// Audio (bell + speech)
-let audioCtx = null;
+// Audio (recorded)
+let bellSound, voiceSound;
 
 // Constants
 const DB_NAME = 'BikeRoughnessDB', DB_VERSION = 2;
@@ -339,78 +339,6 @@ function highlightRecapPointOnMap(idx) {
   setTimeout(() => recapMap.removeLayer(recapHighlight), 3000);
 }
 
-// --- Bell: Web Audio + Web Speech ---
-function ensureAudioContext() {
-  if (!audioCtx) {
-    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  }
-  if (audioCtx.state === 'suspended') {
-    audioCtx.resume();
-  }
-}
-
-function bellDing(timeOffset = 0) {
-  // Simple metallic "bell" using 3 partials with fast attack & exponential decay
-  const ctx = audioCtx;
-  const now = ctx.currentTime + timeOffset;
-
-  const out = ctx.createGain();
-  out.gain.setValueAtTime(0.0001, now);
-  out.gain.exponentialRampToValueAtTime(0.9, now + 0.01);
-  out.gain.exponentialRampToValueAtTime(0.0001, now + 0.8);
-
-  const highpass = ctx.createBiquadFilter();
-  highpass.type = 'highpass';
-  highpass.frequency.setValueAtTime(700, now);
-  out.connect(highpass).connect(ctx.destination);
-
-  const freqs = [1800, 2400, 3000]; // bright partials
-  freqs.forEach((f, i) => {
-    const osc = ctx.createOscillator();
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(f, now);
-    // slight detune per partial for shimmer
-    osc.detune.setValueAtTime(i * 7, now);
-    osc.connect(out);
-    osc.start(now);
-    osc.stop(now + 0.85);
-  });
-
-  // Optional subtle click transient to mimic striker
-  const click = ctx.createBuffer(1, ctx.sampleRate * 0.005, ctx.sampleRate);
-  const data = click.getChannelData(0);
-  for (let i = 0; i < data.length; i++) {
-    data[i] = Math.random() * Math.pow(1 - i / data.length, 6);
-  }
-  const clickSrc = ctx.createBufferSource();
-  clickSrc.buffer = click;
-  const clickGain = ctx.createGain();
-  clickGain.gain.setValueAtTime(0.6, now);
-  clickSrc.connect(clickGain).connect(highpass);
-  clickSrc.start(now);
-}
-
-function sayOnYourLeft(delayMs = 1600) {
-  const msg = new SpeechSynthesisUtterance("On your left!");
-  msg.volume = 1.0;
-  msg.rate = 1.0;
-  msg.pitch = 1.0;
-  msg.lang = navigator.language || 'en-US';
-  // iOS sometimes queues—clear anything pending for snappy response
-  speechSynthesis.cancel();
-  setTimeout(() => speechSynthesis.speak(msg), delayMs);
-}
-
-function playBell() {
-  ensureAudioContext();
-  // Ring twice, then speak; also vibrate if supported
-  bellDing(0);
-  bellDing(1.0);
-  if (navigator.vibrate) navigator.vibrate([40, 80, 40]);
-
-  sayOnYourLeft(1600);
-}
-
 // --- App Controls ---
 async function startRide() {
   if (currentRideId) return;
@@ -517,7 +445,7 @@ async function stopRide() {
   if (currentLocationMarker) map.removeLayer(currentLocationMarker);
 
   showAllHistoricalData();
-  loadPastRides(); // fixed typo
+  loadPastRides(); // fixed typo from loadPastRies
 }
 
 function deleteDatabase() {
@@ -658,8 +586,13 @@ document.addEventListener('DOMContentLoaded', () => {
   closeDetailButton.addEventListener('click', hideRideDetails);
   bellButton.addEventListener('click', playBell);
 
+  // Preload audio (recorded)
+  bellSound = new Audio('sounds/bell.mp3');
+  voiceSound = new Audio('sounds/on_your_left.mp3');
+  bellSound.volume = 1.0;
+  voiceSound.volume = 1.0;
+
   initializeMap();
   openDb();
   initChart();
 });
-
