@@ -357,8 +357,7 @@ function playBell() {
   // Double ring
   try {
     bellSound.currentTime = 0;
-    bellSound.play();
-      /*.then(() => {
+    bellSound.play().then(() => {
       setTimeout(() => {
         try {
           bellSound.currentTime = 0;
@@ -644,6 +643,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (closeDetailButton)closeDetailButton.addEventListener('click', hideRideDetails);
   if (bellButton)       bellButton.addEventListener('click', window.playBell);
 });
+
 
 
 
