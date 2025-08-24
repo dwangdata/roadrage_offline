@@ -357,25 +357,26 @@ function playBell() {
   // Double ring
   try {
     bellSound.currentTime = 0;
-    bellSound.play().then(() => {
+    bellSound.play();
+      /*.then(() => {
       setTimeout(() => {
         try {
           bellSound.currentTime = 0;
           bellSound.play();
         } catch (e) { console.warn('Second bell play failed:', e); }
       }, 1000);
-    }).catch(e => console.warn('Bell play failed (autoplay/gesture?):', e));
+    }).catch(e => console.warn('Bell play failed (autoplay/gesture?):', e));*/
   } catch (e) {
     console.warn('Bell play error:', e);
   }
 
   // Shout
-  setTimeout(() => {
+  /*setTimeout(() => {*/
     try {
       voiceSound.currentTime = 0;
       voiceSound.play().catch(e => console.warn('Voice play failed:', e));
-    } catch (e) { console.warn('Voice play error:', e); }
-  }, 1800);
+    } catch (e) { console.warn('Voice play error:', e); };
+ /* }, 1800);*/
 
   // Haptics
   if (navigator.vibrate) navigator.vibrate([40, 80, 40]);
@@ -643,3 +644,4 @@ document.addEventListener('DOMContentLoaded', () => {
   if (closeDetailButton)closeDetailButton.addEventListener('click', hideRideDetails);
   if (bellButton)       bellButton.addEventListener('click', window.playBell);
 });
+
