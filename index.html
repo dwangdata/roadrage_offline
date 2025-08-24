@@ -13,13 +13,15 @@
 <body>
   <div class="container">
     <h1>Bike Roughness Mapper</h1>
-    <div id="status">Ready to record.</div>
+    <div id="status" aria-live="polite">Ready to record.</div>
+
     <div class="controls">
       <button id="startButton">Start Ride</button>
       <button id="stopButton" disabled>Stop Ride</button>
       <button id="deleteDataButton">Clear All Data</button>
-      <button id="bellButton" aria-label="Sound bicycle bell and say On your left">Bell</button>
+      <button id="bellButton" aria-label="Ring bell and say 'On your left'">Bell</button>
     </div>
+
     <div id="dataPointsCounter">Data Points: 0</div>
 
     <!-- Main map -->
