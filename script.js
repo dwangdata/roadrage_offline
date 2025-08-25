@@ -387,14 +387,13 @@ async function stopRide() {
   statusDiv.textContent = 'Saving ride…';
 
   try {
+    // Save to IndexedDB as before
     const tx = db.transaction(['rides','rideDataPoints'], 'readwrite');
     const ridesStore = tx.objectStore('rides');
     const dpStore    = tx.objectStore('rideDataPoints');
-
     for (const dp of currentRideDataPoints) {
       await promisifiedDbRequest(dpStore.put(dp));
     }
-
     const rr = await promisifiedDbRequest(ridesStore.get(currentRideId));
     const upd = {
       ...rr,
@@ -406,7 +405,30 @@ async function stopRide() {
     await promisifiedDbRequest(ridesStore.put(upd));
     await tx.complete;
 
-    statusDiv.textContent = 'Ride saved!';
+    // Save to backend
+    const ridePayload = {
+      rideId: currentRideId,
+      startTime: rr.startTime,
+      endTime: upd.endTime,
+      duration: upd.duration,
+      totalDataPoints: upd.totalDataPoints,
+      status: upd.status,
+      dataPoints: currentRideDataPoints
+    };
+    try {
+      const res = await fetch('/api/rides', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(ridePayload)
+      });
+      if (res.ok) {
+        statusDiv.textContent = 'Ride saved to backend!';
+      } else {
+        statusDiv.textContent = 'Ride saved locally, but backend error.';
+      }
+    } catch (err) {
+      statusDiv.textContent = 'Ride saved locally, but backend unreachable.';
+    }
   } catch (e) {
     console.error(e);
     statusDiv.textContent = 'Error saving ride.';
@@ -536,7 +558,36 @@ document.addEventListener('DOMContentLoaded', () => {
   pastRidesList     = document.getElementById('pastRidesList');
   rideDetailView    = document.getElementById('rideDetailView');
   detailContent     = document.getElementById('detailContent');
-  closeDetailButton = document.getElementById('closeDetailButton');
+    closeDetailButton = document.getElementById('closeDetailButton');
+
+    // --- Backend Demo: User Input Form ---
+    const userInputForm = document.getElementById('userInputForm');
+    const userInput = document.getElementById('userInput');
+    const saveResult = document.getElementById('saveResult');
+    if (userInputForm) {
+      userInputForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const value = userInput.value.trim();
+        if (!value) return;
+        saveResult.textContent = 'Saving...';
+        try {
+          const res = await fetch('/api/data', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ input: value })
+          });
+          const data = await res.json();
+          if (res.ok) {
+            saveResult.textContent = `Saved! ID: ${data.id}`;
+            userInput.value = '';
+          } else {
+            saveResult.textContent = `Error: ${data.error}`;
+          }
+        } catch (err) {
+          saveResult.textContent = 'Network error.';
+        }
+      });
+    }
 
   startButton.addEventListener('click', startRide);
   stopButton.addEventListener('click', stopRide);

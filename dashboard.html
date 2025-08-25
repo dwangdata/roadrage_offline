@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Ride Dashboard</title>
+  <link rel="stylesheet" href="style.css"/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+</head>
+<body>
+  <div class="container">
+    <h1>Ride Dashboard</h1>
+    <div>
+      <label for="rideSelect">Select a Ride:</label>
+      <select id="rideSelect"></select>
+    </div>
+    <div id="rideInfo"></div>
+    <div id="dashboardMap" style="height:300px; width:100%; margin-bottom:20px;"></div>
+    <canvas id="dashboardChart" height="200" style="width:100%; margin-bottom:20px;"></canvas>
+  </div>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+  <script src="dashboard.js"></script>
+</body>
+</html>
