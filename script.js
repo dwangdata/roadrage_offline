@@ -39,7 +39,7 @@ let recordingMime = '';
 let viewfinderActive = false;
 
 // Android fallback (Leaflet offscreen → compositor)
-let compositorWrap, compositorCanvas, compositorCtx, compositorRAF = 0;
+let compositorCanvas, compositorCtx, compositorRAF = 0; // stays hidden in UI
 let offMapDiv = null, offMap = null, offRenderer = null;
 let offRidePath = null, offHistoricalLayer = null, offCurrentMarker = null;
 
@@ -345,7 +345,7 @@ function updateMapDisplay(dp) {
 }
 
 // =======================
-// ANDROID FALLBACK: Leaflet offscreen map → compositor canvas
+// ANDROID FALLBACK: Leaflet offscreen map → compositor canvas (hidden)
 // =======================
 
 function ensureOffscreenLeaflet() {
@@ -391,7 +391,6 @@ async function populateOffscreenHistorical() {
     }).addTo(offHistoricalLayer);
   });
   await tx.complete;
-  // Slight delay then force a redraw
   setTimeout(()=> offMap && offMap.invalidateSize(), 50);
 }
 
@@ -416,11 +415,13 @@ function updateOffscreenMapDisplay(dp) {
   offMap.setView(latlng, Math.max(offMap.getZoom(), 15));
 }
 
-// Get the actual canvas element from Leaflet's canvas renderer
-function getOffscreenCanvas() {
-  // Leaflet's canvas renderer stores its canvas in _container
-  // We find the first renderer in the map; since we constructed one, use it.
-  return offRenderer && offRenderer._container ? offRenderer._container : null;
+// Create a hidden compositor canvas we can record from
+function ensureCompositorCanvas() {
+  if (compositorCanvas) return;
+  compositorCanvas = document.createElement('canvas'); // not added to layout; stays hidden
+  compositorCanvas.width = 1280;
+  compositorCanvas.height = 720;
+  compositorCtx = compositorCanvas.getContext('2d');
 }
 
 // =======================
@@ -439,12 +440,12 @@ function pickBestMime() {
   return '';
 }
 function stopTracks(stream) { try { stream?.getTracks().forEach(t => t.stop()); } catch {} }
-function setRecordingUI(active, compositorMode=false) {
-  viewfinderContainer?.classList.toggle('hidden', !active || compositorMode); // hide viewfinder when compositor used
-  document.body.classList.toggle('with-viewfinder', active && !compositorMode);
+function setRecordingUI(active /*, compositorMode*/) {
+  // Keep the visible map ALWAYS on screen.
+  // Show the viewfinder in the UI while recording (both desktop and Android).
+  viewfinderContainer?.classList.toggle('hidden', !active);
+  document.body.classList.toggle('with-viewfinder', active);
   recIndicator?.classList.toggle('hidden', !active);
-  document.getElementById('map')?.classList.toggle('hidden', compositorMode && active);
-  compositorWrap?.classList.toggle('hidden', !(compositorMode && active));
   if (viewfinderToggleButton) viewfinderToggleButton.textContent = active ? '■ Stop & Save' : '▶︎ Viewfinder + Record';
 }
 
@@ -470,15 +471,15 @@ async function startDesktopRecording() {
   displayStream.getVideoTracks()[0].addEventListener('ended', () => { if (viewfinderActive) stopViewfinderAndRecording(); });
 
   const combined = new MediaStream([ ...displayStream.getVideoTracks(), ...micStream.getAudioTracks() ]);
-  await startMediaRecorder(combined, /*compositorMode*/false);
-  setRecordingUI(true, false);
+  await startMediaRecorder(combined);
+  setRecordingUI(true);
   statusDiv && (statusDiv.textContent = 'Recording screen + mic. Viewfinder active.');
 }
 
 // ---- Android fallback: offscreen Leaflet canvas (vector-only) + camera PIP + mic
 async function startAndroidCompositorRecording() {
-  // Ensure offscreen Leaflet exists and is clean
   ensureOffscreenLeaflet();
+  ensureCompositorCanvas();
 
   // camera
   try {
@@ -486,6 +487,8 @@ async function startAndroidCompositorRecording() {
       video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } },
       audio: false
     });
+    // Also show the camera in the on-screen viewfinder
+    viewfinderEl.srcObject = cameraStream; try { await viewfinderEl.play(); } catch {}
   } catch (e) { statusDiv && (statusDiv.textContent = 'Unable to access rear camera.'); return; }
 
   // mic
@@ -495,78 +498,70 @@ async function startAndroidCompositorRecording() {
     });
   } catch (e) { statusDiv && (statusDiv.textContent = 'Unable to access microphone.'); stopTracks(cameraStream); return; }
 
-  // Compositor canvas sizing
-  const wrap = compositorWrap;
-  const cvs = compositorCanvas;
-  const rect = wrap.getBoundingClientRect();
-  cvs.width = Math.max(600, Math.floor(rect.width));
-  cvs.height = Math.max(350, Math.floor(rect.height));
-  compositorCtx = cvs.getContext('2d');
-
-  // Camera element to draw into canvas PIP
+  // Local <video> used only for drawing into the hidden compositor canvas
   const vid = document.createElement('video');
   vid.srcObject = cameraStream; vid.muted = true; vid.playsInline = true;
   try { await vid.play(); } catch {}
 
-  // Draw loop: offscreen Leaflet canvas (route + historical + current) → camera PIP → HUD
+  // Hidden draw loop: offscreen Leaflet canvas (route + historical + current) → camera PIP → HUD
   const draw = () => {
-    compositorCtx.clearRect(0,0,cvs.width,cvs.height);
+    const cvs = compositorCanvas, ctx = compositorCtx;
+    const W = cvs.width, H = cvs.height;
+    ctx.clearRect(0,0,W,H);
 
     // 1) draw the offscreen Leaflet canvas (vector-only)
-    const offCanvas = getOffscreenCanvas();
+    const offCanvas = offRenderer && offRenderer._container ? offRenderer._container : null;
     if (offCanvas) {
-      // scale to fit compositor canvas size
-      try { compositorCtx.drawImage(offCanvas, 0, 0, cvs.width, cvs.height); } catch {}
+      // draw with aspect fit: fill W x H (they are roughly similar to our offscreen size)
+      try { ctx.drawImage(offCanvas, 0, 0, W, H); } catch {}
     } else {
-      // fallback: plain background
-      compositorCtx.fillStyle = '#f8f9fb';
-      compositorCtx.fillRect(0,0,cvs.width,cvs.height);
+      ctx.fillStyle = '#f8f9fb';
+      ctx.fillRect(0,0,W,H);
     }
 
     // 2) draw camera PIP bottom-right
-    const pipW = Math.floor(cvs.width * 0.38);
+    const pipW = Math.floor(W * 0.38);
     const pipH = Math.floor(pipW * 9/16);
-    const pad = 12;
-    compositorCtx.save();
-    // rounded rect clip
-    const x = cvs.width - pipW - pad, y = cvs.height - pipH - pad, r = 12;
-    compositorCtx.beginPath();
-    compositorCtx.moveTo(x+r, y);
-    compositorCtx.arcTo(x+pipW, y, x+pipW, y+pipH, r);
-    compositorCtx.arcTo(x+pipW, y+pipH, x, y+pipH, r);
-    compositorCtx.arcTo(x, y+pipH, x, y, r);
-    compositorCtx.arcTo(x, y, x+pipW, y, r);
-    compositorCtx.closePath();
-    compositorCtx.clip();
-    try { compositorCtx.drawImage(vid, x, y, pipW, pipH); } catch {}
-    compositorCtx.restore();
+    const pad = 24;
+    ctx.save();
+    const x = W - pipW - pad, y = H - pipH - pad, r = 18;
+    ctx.beginPath();
+    ctx.moveTo(x+r, y);
+    ctx.arcTo(x+pipW, y, x+pipW, y+pipH, r);
+    ctx.arcTo(x+pipW, y+pipH, x, y+pipH, r);
+    ctx.arcTo(x, y+pipH, x, y, r);
+    ctx.arcTo(x, y, x+pipW, y, r);
+    ctx.closePath();
+    ctx.clip();
+    try { ctx.drawImage(vid, x, y, pipW, pipH); } catch {}
+    ctx.restore();
 
     // 3) HUD REC dot
-    compositorCtx.fillStyle = '#e10600';
-    compositorCtx.beginPath();
-    compositorCtx.arc(16, 16, 6, 0, Math.PI*2);
-    compositorCtx.fill();
+    ctx.fillStyle = '#e10600';
+    ctx.beginPath();
+    ctx.arc(20, 20, 8, 0, Math.PI*2);
+    ctx.fill();
 
     compositorRAF = requestAnimationFrame(draw);
   };
   compositorRAF = requestAnimationFrame(draw);
 
-  // Recorder from canvas stream + mic
+  // Recorder from hidden canvas stream + mic
   const canvasStream = compositorCanvas.captureStream(30);
   const combined = new MediaStream([ ...canvasStream.getVideoTracks(), ...micStream.getAudioTracks() ]);
-  await startMediaRecorder(combined, /*compositorMode*/true);
+  await startMediaRecorder(combined);
 
-  // Center map on current position when available
+  // Center offscreen map when GPS already known
   if (latestGpsPosition?.coords) {
     const { latitude, longitude } = latestGpsPosition.coords;
     offMap.setView([latitude, longitude], 15);
   }
 
-  setRecordingUI(true, true);
-  statusDiv && (statusDiv.textContent = 'Recording (Android fallback): map + camera + mic.');
+  setRecordingUI(true);
+  statusDiv && (statusDiv.textContent = 'Recording (Android fallback): map + camera + mic (live map stays visible).');
 }
 
-async function startMediaRecorder(stream, compositorMode) {
+async function startMediaRecorder(stream) {
   recordedChunks = [];
   recordingMime = pickBestMime();
   try {
@@ -580,7 +575,7 @@ async function startMediaRecorder(stream, compositorMode) {
     return;
   }
   recorder.ondataavailable = (ev) => { if (ev.data && ev.data.size > 0) recordedChunks.push(ev.data); };
-  recorder.onstop = () => saveRecording(compositorMode);
+  recorder.onstop = () => saveRecording();
   viewfinderActive = true;
   try { recorder.start(1000); } catch (e) { console.warn('Recorder start err', e); }
 }
@@ -589,11 +584,11 @@ async function startViewfinderAndRecording() {
   if (viewfinderActive) return;
 
   if (isScreenCaptureSupported && !isAndroid) {
-    // Desktop path: show real DOM viewfinder and record tab
+    // Desktop path: UI map remains; show DOM viewfinder and record tab
     viewfinderContainer?.classList.remove('hidden');
     await startDesktopRecording();
   } else {
-    // Android fallback: offscreen Leaflet + compositor
+    // Android fallback: record from hidden compositor; keep live map visible
     await startAndroidCompositorRecording();
   }
 }
@@ -607,11 +602,11 @@ function stopViewfinderAndRecording() {
   stopTracks(micStream); micStream = null;
   if (compositorRAF) cancelAnimationFrame(compositorRAF), compositorRAF = 0;
 
-  setRecordingUI(false, compositorWrap && !compositorWrap.classList.contains('hidden'));
+  setRecordingUI(false);
   statusDiv && (statusDiv.textContent = 'Finalizing recording…');
 }
 
-function saveRecording(/*compositorMode*/) {
+function saveRecording() {
   stopTracks(cameraStream); cameraStream = null;
 
   const mime = recordingMime || (recordedChunks[0]?.type) || 'video/webm';
@@ -626,9 +621,7 @@ function saveRecording(/*compositorMode*/) {
     downloadRow.classList.remove('hidden');
   }
 
-  // Reset UI
-  document.getElementById('map')?.classList.remove('hidden');
-  compositorWrap?.classList.add('hidden');
+  // Keep the visible map as-is; just hide the viewfinder
   viewfinderContainer?.classList.add('hidden');
 
   viewfinderActive = false;
@@ -876,10 +869,6 @@ document.addEventListener('DOMContentLoaded', () => {
   downloadRow           = document.getElementById('downloadRow');
   lastRecordingLink     = document.getElementById('lastRecordingLink');
 
-  // Android compositor refs
-  compositorWrap   = document.getElementById('compositorWrap');
-  compositorCanvas = document.getElementById('compositorCanvas');
-
   // Initialize core systems
   initializeMap();
   initChart();
@@ -903,11 +892,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (viewfinderActive) {
       stopViewfinderAndRecording();
     } else {
-      // Show compositor UI immediately on Android so users see recording area
-      if (!isScreenCaptureSupported || isAndroid) {
-        document.getElementById('map')?.classList.add('hidden');
-        compositorWrap?.classList.remove('hidden');
-      }
       await startViewfinderAndRecording();
     }
   });
