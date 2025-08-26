@@ -48,8 +48,13 @@ let mlMap = null;            // MapLibre GL map instance
 let mlCanvas = null;         // MapLibre's internal canvas
 let compositorRAF = 0;
 
-// Simple path store for compositor drawing (Android)
-const pathPoints = []; // [{lat, lon, roughness}]
+// MapLibre live route plumbing (shows on the map itself)
+const ML_RIDE_SOURCE = 'ride-segments';
+const ML_RIDE_LAYER  = 'ride-line';
+let rideFeatureCollection = { type: 'FeatureCollection', features: [] }; // segments with per-segment color
+
+// Simple path store (also used for MapLibre updates)
+const pathPoints = []; // [{lat, lon, rough}]
 
 // --- Helpers ---
 function promisifiedDbRequest(req) {
@@ -275,10 +280,8 @@ async function processCombinedDataPoint() {
     vibrationChart.update();
   }
 
-  // For Android compositor, keep a small track too
-  if (mlMap) {
-    pathPoints.push({ lat: dp.latitude, lon: dp.longitude, rough: dp.roughnessValue });
-  }
+  // For Android compositor/MapLibre route
+  onMlNewPoint({ lat: dp.latitude, lon: dp.longitude, rough: dp.roughnessValue });
 
   statusDiv && (statusDiv.textContent =
     `Lat ${latitude.toFixed(4)}, Lon ${longitude.toFixed(4)}, Rough ${roughness.toFixed(2)}`);
@@ -395,23 +398,8 @@ async function startAndroidCompositorRecording() {
     });
   } catch (e) { statusDiv && (statusDiv.textContent = 'Unable to access microphone.'); stopTracks(cameraStream); return; }
 
-  // Setup MapLibre map (WebGL canvas)
-  if (!mlMap) {
-    const mapDiv = document.createElement('div');
-    mapDiv.style.cssText = 'position:absolute;left:-9999px;top:-9999px;width:600px;height:350px;'; // offscreen
-    document.body.appendChild(mapDiv);
-
-    mlMap = new maplibregl.Map({
-      container: mapDiv,
-      style: MAP_STYLE_URL,
-      center: [-114.0719, 51.0447],
-      zoom: 13,
-      cooperativeGestures: false,
-      attributionControl: false
-    });
-    await new Promise(res => mlMap.once('load', res));
-    mlCanvas = mlMap.getCanvas();
-  }
+  // Setup MapLibre map (WebGL canvas) and route layers
+  await mlInitMapAndLayers();
 
   // Compositor canvas sizing
   const wrap = compositorWrap;
@@ -421,11 +409,12 @@ async function startAndroidCompositorRecording() {
   cvs.height = Math.max(350, Math.floor(rect.height));
   compositorCtx = cvs.getContext('2d');
 
-  // Draw loop: map → camera PIP → HUD
+  // Camera element to draw into canvas PIP
   const vid = document.createElement('video');
   vid.srcObject = cameraStream; vid.muted = true; vid.playsInline = true;
   try { await vid.play(); } catch {}
 
+  // Draw loop: maplibre canvas (already includes route) → camera PIP → HUD
   const draw = () => {
     compositorCtx.clearRect(0,0,cvs.width,cvs.height);
 
@@ -450,21 +439,7 @@ async function startAndroidCompositorRecording() {
     try { compositorCtx.drawImage(vid, x, y, pipW, pipH); } catch {}
     compositorCtx.restore();
 
-    // 3) draw simple path polyline colored by roughness (optional)
-    if (pathPoints.length > 1) {
-      for (let i = 1; i < pathPoints.length; i++) {
-        const a = pathPoints[i-1], b = pathPoints[i];
-        const ca = mlMap.project([a.lon, a.lat]), cb = mlMap.project([b.lon, b.lat]);
-        compositorCtx.beginPath();
-        compositorCtx.moveTo(ca.x * cvs.width / mlCanvas.width, ca.y * cvs.height / mlCanvas.height);
-        compositorCtx.lineTo(cb.x * cvs.width / mlCanvas.width, cb.y * cvs.height / mlCanvas.height);
-        compositorCtx.lineWidth = 5;
-        compositorCtx.strokeStyle = roughnessToColor(b.rough);
-        compositorCtx.stroke();
-      }
-    }
-
-    // 4) draw HUD REC dot
+    // 3) HUD REC dot
     compositorCtx.fillStyle = '#e10600';
     compositorCtx.beginPath();
     compositorCtx.arc(16, 16, 6, 0, Math.PI*2);
@@ -487,6 +462,84 @@ async function startAndroidCompositorRecording() {
 
   setRecordingUI(true, true);
   statusDiv && (statusDiv.textContent = 'Recording (Android fallback): map + camera + mic.');
+}
+
+// ---- MapLibre setup & live route layer (Android)
+async function mlInitMapAndLayers() {
+  if (!mlMap) {
+    const mapDiv = document.createElement('div');
+    mapDiv.style.cssText = 'position:absolute;left:-9999px;top:-9999px;width:600px;height:350px;'; // offscreen
+    document.body.appendChild(mapDiv);
+
+    mlMap = new maplibregl.Map({
+      container: mapDiv,
+      style: MAP_STYLE_URL,
+      center: [-114.0719, 51.0447],
+      zoom: 13,
+      cooperativeGestures: false,
+      attributionControl: false,
+      antialias: true
+    });
+    await new Promise(res => mlMap.once('load', res));
+    mlCanvas = mlMap.getCanvas();
+
+    // Route source + layer (per-segment color via feature property)
+    mlMap.addSource(ML_RIDE_SOURCE, {
+      type: 'geojson',
+      data: rideFeatureCollection
+    });
+    mlMap.addLayer({
+      id: ML_RIDE_LAYER,
+      type: 'line',
+      source: ML_RIDE_SOURCE,
+      paint: {
+        'line-width': 5,
+        'line-opacity': 0.95,
+        'line-color': ['to-color', ['get', 'color']]
+      }
+    });
+  } else {
+    // If map already exists, clear previous ride features
+    rideFeatureCollection = { type: 'FeatureCollection', features: [] };
+    const src = mlMap.getSource(ML_RIDE_SOURCE);
+    if (src) src.setData(rideFeatureCollection);
+  }
+
+  // Also ensure the canvas size maps well to compositor; force a resize tick
+  mlMap.resize();
+  pathPoints.length = 0; // reset path
+}
+
+// Called on each new GPS datapoint
+function onMlNewPoint(pt) {
+  if (!mlMap) return;
+  const src = mlMap.getSource(ML_RIDE_SOURCE);
+  if (!src) return;
+
+  // Append to in-memory path
+  const prev = pathPoints[pathPoints.length - 1];
+  pathPoints.push(pt);
+
+  // Add a new colored segment feature between prev → pt
+  if (prev) {
+    rideFeatureCollection.features.push({
+      type: 'Feature',
+      geometry: {
+        type: 'LineString',
+        coordinates: [
+          [prev.lon, prev.lat],
+          [pt.lon, pt.lat]
+        ]
+      },
+      properties: {
+        color: roughnessToColor(pt.rough)
+      }
+    });
+    src.setData(rideFeatureCollection);
+  }
+
+  // Keep camera roughly centered as you move (lightweight jump)
+  mlMap.jumpTo({ center: [pt.lon, pt.lat] });
 }
 
 async function startMediaRecorder(stream, compositorMode) {
@@ -536,7 +589,7 @@ function stopViewfinderAndRecording() {
   statusDiv && (statusDiv.textContent = 'Finalizing recording…');
 }
 
-function saveRecording(compositorMode) {
+function saveRecording(/*compositorMode*/) {
   stopTracks(cameraStream); cameraStream = null;
 
   const mime = recordingMime || (recordedChunks[0]?.type) || 'video/webm';
