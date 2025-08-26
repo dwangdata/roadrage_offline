@@ -28,6 +28,16 @@ const HPF_ALPHA = 0.8;
 const ROUGH_THRESHOLDS = [0,3,6,9,15,21,30];
 const ROUGH_COLORS     = ['#ffffff','#dddddd','#bbbbbb','#999999','#777777','#555555','#333333','#000000'];
 
+// --- Media / Recording Globals (new) ---
+let viewfinderEl, viewfinderContainer, viewfinderToggleButton, recIndicator, downloadRow, lastRecordingLink;
+let cameraStream = null;     // rear camera (video-only)
+let displayStream = null;    // screen/tab capture (video-only)
+let micStream = null;        // microphone (audio-only)
+let recorder = null;         // MediaRecorder
+let recordedChunks = [];
+let recordingMime = '';
+let viewfinderActive = false;
+
 // --- IndexedDB Helper ---
 function promisifiedDbRequest(req) {
   return new Promise((res, rej) => {
@@ -354,35 +364,171 @@ function playBell() {
     console.warn('Bell audio not loaded');
     return;
   }
-  // Double ring
   try {
     bellSound.currentTime = 0;
-    bellSound.play()
-      /*.then(() => {
-      setTimeout(() => {
-        try {
-          bellSound.currentTime = 0;
-          bellSound.play();
-        } catch (e) { console.warn('Second bell play failed:', e); }
-      }, 1000);
-    }).catch(e => console.warn('Bell play failed (autoplay/gesture?):', e));*/
+    bellSound.play();
   } catch (e) {
     console.warn('Bell play error:', e);
   }
-
-  // Shout
-  /*setTimeout(() => {*/
-    try {
-      voiceSound.currentTime = 0;
-      voiceSound.play().catch(e => console.warn('Voice play failed:', e));
-    } catch (e) { console.warn('Voice play error:', e); };
- /* }, 1800);*/
-
-  // Haptics
+  try {
+    voiceSound.currentTime = 0;
+    voiceSound.play().catch(e => console.warn('Voice play failed:', e));
+  } catch (e) { console.warn('Voice play error:', e); }
   if (navigator.vibrate) navigator.vibrate([40, 80, 40]);
 }
-// Make extra sure it's visible on window for listeners bound earlier in some environments
 window.playBell = playBell;
+
+// =======================
+// New: Viewfinder + Record
+// =======================
+
+function pickBestMime() {
+  const candidates = [
+    'video/webm;codecs=vp9,opus',
+    'video/webm;codecs=vp8,opus',
+    'video/webm;codecs=vp9',
+    'video/webm',
+    'video/mp4;codecs=avc1.42E01E,mp4a.40.2',
+    'video/mp4'
+  ];
+  for (const type of candidates) {
+    if (window.MediaRecorder && MediaRecorder.isTypeSupported(type)) return type;
+  }
+  return '';
+}
+
+function stopTracks(stream) {
+  try { stream?.getTracks().forEach(t => t.stop()); } catch {}
+}
+
+function setRecordingUI(active) {
+  viewfinderContainer?.classList.toggle('hidden', !active);
+  document.body.classList.toggle('with-viewfinder', active);
+  recIndicator?.classList.toggle('hidden', !active);
+  if (viewfinderToggleButton) {
+    viewfinderToggleButton.textContent = active ? '■ Stop & Save' : '▶︎ Viewfinder + Record';
+  }
+}
+
+async function startViewfinderAndRecording() {
+  if (viewfinderActive) return;
+
+  // 1) Rear camera
+  try {
+    cameraStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } },
+      audio: false
+    });
+  } catch (e) {
+    console.error('Camera error', e);
+    statusDiv && (statusDiv.textContent = 'Unable to access rear camera.');
+    return;
+  }
+
+  viewfinderEl.srcObject = cameraStream;
+  try { await viewfinderEl.play(); } catch {}
+
+  // 2) Mic
+  try {
+    micStream = await navigator.mediaDevices.getUserMedia({
+      audio: {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true,
+        channelCount: 1
+      },
+      video: false
+    });
+  } catch (e) {
+    console.error('Mic error', e);
+    statusDiv && (statusDiv.textContent = 'Unable to access microphone.');
+    stopTracks(cameraStream);
+    return;
+  }
+
+  // 3) Screen/Tab capture (includes map + viewfinder)
+  if (!navigator.mediaDevices.getDisplayMedia) {
+    statusDiv && (statusDiv.textContent = 'Screen capture not supported on this browser.');
+    stopTracks(cameraStream); stopTracks(micStream);
+    return;
+  }
+
+  try {
+    displayStream = await navigator.mediaDevices.getDisplayMedia({
+      video: { frameRate: 30, displaySurface: 'browser', preferCurrentTab: true },
+      audio: false
+    });
+  } catch (e) {
+    console.error('Display capture error', e);
+    statusDiv && (statusDiv.textContent = 'Screen capture was not started.');
+    stopTracks(cameraStream); stopTracks(micStream);
+    return;
+  }
+
+  // If user stops sharing via browser UI
+  const dispTrack = displayStream.getVideoTracks()[0];
+  dispTrack.addEventListener('ended', () => { if (viewfinderActive) stopViewfinderAndRecording(); });
+
+  // 4) Combine display video + mic audio for recording
+  const combined = new MediaStream([
+    ...displayStream.getVideoTracks(),
+    ...micStream.getAudioTracks()
+  ]);
+
+  // 5) Start recorder
+  recordedChunks = [];
+  recordingMime = pickBestMime();
+  try {
+    recorder = new MediaRecorder(combined, recordingMime ? { mimeType: recordingMime } : undefined);
+  } catch (e) {
+    console.error('MediaRecorder error', e);
+    statusDiv && (statusDiv.textContent = 'Recording not supported on this browser.');
+    stopTracks(displayStream); stopTracks(micStream); stopTracks(cameraStream);
+    return;
+  }
+
+  recorder.ondataavailable = (ev) => {
+    if (ev.data && ev.data.size > 0) recordedChunks.push(ev.data);
+  };
+  recorder.onstop = saveRecording;
+
+  setRecordingUI(true);
+  viewfinderActive = true;
+  try { recorder.start(1000); } catch (e) { console.warn('Recorder start err', e); }
+
+  statusDiv && (statusDiv.textContent = 'Recording screen + mic. Viewfinder active.');
+}
+
+function stopViewfinderAndRecording() {
+  if (!viewfinderActive) return;
+
+  try { recorder?.stop(); } catch {}
+  stopTracks(displayStream);
+  stopTracks(micStream);
+  // Keep camera preview alive until onstop to avoid platform quirks
+  setRecordingUI(false);
+  viewfinderActive = false;
+  statusDiv && (statusDiv.textContent = 'Finalizing recording…');
+}
+
+function saveRecording() {
+  stopTracks(cameraStream);
+  cameraStream = micStream = displayStream = null;
+
+  const mime = recordingMime || (recordedChunks[0]?.type) || 'video/webm';
+  const ext = mime.includes('mp4') ? 'mp4' : 'webm';
+  const blob = new Blob(recordedChunks, { type: mime });
+  const url = URL.createObjectURL(blob);
+
+  if (lastRecordingLink && downloadRow) {
+    const name = currentRideId ? `ride-${currentRideId}.${ext}` : `roughness-${Date.now()}.${ext}`;
+    lastRecordingLink.href = url;
+    lastRecordingLink.download = name;
+    downloadRow.classList.remove('hidden');
+  }
+
+  statusDiv && (statusDiv.textContent = 'Recording saved. You can download it above.');
+}
 
 // --- App Controls ---
 async function startRide() {
@@ -626,6 +772,14 @@ document.addEventListener('DOMContentLoaded', () => {
   detailContent     = document.getElementById('detailContent');
   closeDetailButton = document.getElementById('closeDetailButton');
 
+  // New refs for recording UI
+  viewfinderEl          = document.getElementById('viewfinder');
+  viewfinderContainer   = document.getElementById('viewfinderContainer');
+  viewfinderToggleButton= document.getElementById('viewfinderToggle');
+  recIndicator          = document.getElementById('recIndicator');
+  downloadRow           = document.getElementById('downloadRow');
+  lastRecordingLink     = document.getElementById('lastRecordingLink');
+
   // Initialize core systems FIRST so later calls have a map/db available
   initializeMap();
   initChart();
@@ -643,9 +797,12 @@ document.addEventListener('DOMContentLoaded', () => {
   if (deleteDataButton) deleteDataButton.addEventListener('click', deleteDatabase);
   if (closeDetailButton)closeDetailButton.addEventListener('click', hideRideDetails);
   if (bellButton)       bellButton.addEventListener('click', window.playBell);
+
+  // New: Viewfinder + Record toggle
+  if (viewfinderToggleButton) {
+    viewfinderToggleButton.addEventListener('click', () => {
+      if (viewfinderActive) stopViewfinderAndRecording();
+      else startViewfinderAndRecording();
+    });
+  }
 });
-
-
-
-
-
