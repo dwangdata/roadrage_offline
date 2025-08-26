@@ -2,13 +2,17 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+  />
   <title>Bike Roughness Mapper MVP</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet"/>
-  <link rel="stylesheet" href="style.css"/>
 
   <!-- Leaflet -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+
+  <link rel="stylesheet" href="style.css"/>
 </head>
 <body>
   <div class="container">
@@ -16,10 +20,16 @@
     <div id="status" aria-live="polite">Ready to record.</div>
 
     <div class="controls">
-      <button id="startButton">Start Ride</button>
-      <button id="stopButton" disabled>Stop Ride</button>
-      <button id="deleteDataButton">Clear All Data</button>
-      <button id="bellButton" aria-label="Ring bell and say 'On your left'">Bell</button>
+      <button id="startButton" class="btn-sm">Start Ride</button>
+      <button id="stopButton" class="btn-sm" disabled>Stop Ride</button>
+      <button id="deleteDataButton" class="btn-sm">Clear All Data</button>
+      <button id="bellButton" class="btn-sm" aria-label="Ring bell and say 'On your left'">Bell</button>
+
+      <!-- New: viewfinder + recording toggle and REC indicator -->
+      <button id="viewfinderToggle" class="btn-sm" aria-label="Toggle viewfinder and start/stop recording">
+        ▶︎ Viewfinder + Record
+      </button>
+      <span id="recIndicator" class="rec-dot hidden" aria-hidden="true"></span>
     </div>
 
     <div id="dataPointsCounter">Data Points: 0</div>
@@ -27,18 +37,28 @@
     <!-- Main map -->
     <div id="map"></div>
 
+    <!-- New: Rear camera viewfinder -->
+    <div id="viewfinderContainer" class="hidden">
+      <video id="viewfinder" playsinline muted></video>
+    </div>
+
     <!-- Live vibration chart -->
     <canvas id="vibrationChart" height="200" style="width:100%; margin-bottom:20px;"></canvas>
 
     <h2>Past Rides</h2>
     <ul id="pastRidesList"></ul>
+
+    <!-- New: Download link after recording -->
+    <div id="downloadRow" class="hidden">
+      <a id="lastRecordingLink" download>Download last recording</a>
+    </div>
   </div>
 
   <!-- Ride Detail Overlay -->
   <div id="rideDetailView" class="hidden">
     <div class="detail-header">
       <h3>Ride Details</h3>
-      <button id="closeDetailButton">Close</button>
+      <button id="closeDetailButton" class="btn-sm">Close</button>
     </div>
 
     <!-- Recap map -->
