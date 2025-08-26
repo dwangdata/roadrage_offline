@@ -9,8 +9,11 @@
   <title>Bike Roughness Mapper MVP</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet"/>
 
-  <!-- Leaflet -->
+  <!-- Leaflet (desktop / general map) -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+
+  <!-- MapLibre GL (Android fallback map rendered to canvas) -->
+  <link href="https://unpkg.com/maplibre-gl@4.5.2/dist/maplibre-gl.css" rel="stylesheet" />
 
   <link rel="stylesheet" href="style.css"/>
 </head>
@@ -25,7 +28,7 @@
       <button id="deleteDataButton" class="btn-sm">Clear All Data</button>
       <button id="bellButton" class="btn-sm" aria-label="Ring bell and say 'On your left'">Bell</button>
 
-      <!-- New: viewfinder + recording toggle and REC indicator -->
+      <!-- Viewfinder + Recording -->
       <button id="viewfinderToggle" class="btn-sm" aria-label="Toggle viewfinder and start/stop recording">
         ▶︎ Viewfinder + Record
       </button>
@@ -34,10 +37,15 @@
 
     <div id="dataPointsCounter">Data Points: 0</div>
 
-    <!-- Main map -->
+    <!-- Main map (Leaflet for desktop / general) -->
     <div id="map"></div>
 
-    <!-- New: Rear camera viewfinder -->
+    <!-- Android fallback: compositor canvas replaces map+viewfinder on screen while recording -->
+    <div id="compositorWrap" class="hidden">
+      <canvas id="compositorCanvas"></canvas>
+    </div>
+
+    <!-- Rear camera viewfinder (visible in desktop path; hidden in Android compositor while recording) -->
     <div id="viewfinderContainer" class="hidden">
       <video id="viewfinder" playsinline muted></video>
     </div>
@@ -48,7 +56,7 @@
     <h2>Past Rides</h2>
     <ul id="pastRidesList"></ul>
 
-    <!-- New: Download link after recording -->
+    <!-- Download link after recording -->
     <div id="downloadRow" class="hidden">
       <a id="lastRecordingLink" download>Download last recording</a>
     </div>
@@ -61,19 +69,19 @@
       <button id="closeDetailButton" class="btn-sm">Close</button>
     </div>
 
-    <!-- Recap map -->
     <div id="recapMap" style="height:300px; width:100%; margin-bottom:20px;"></div>
-
-    <!-- Recap chart -->
     <canvas id="recapChart" height="200" style="width:100%; margin-bottom:20px;"></canvas>
-
     <pre id="detailContent"></pre>
   </div>
 
-  <!-- Leaflet, Chart.js, Date Adapter, then our script -->
+  <!-- Libraries -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+
+  <!-- MapLibre GL (used only in Android compositor mode) -->
+  <script src="https://unpkg.com/maplibre-gl@4.5.2/dist/maplibre-gl.js"></script>
+
   <script src="script.js"></script>
 </body>
 </html>
