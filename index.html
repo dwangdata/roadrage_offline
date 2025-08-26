@@ -6,7 +6,7 @@
     name="viewport"
     content="width=device-width, initial-scale=1.0, viewport-fit=cover"
   />
-  <title>Bike Roughness Mapper MVP</title>
+  <title>FleetSense - Route Intelligence System</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet"/>
 
   <!-- Leaflet -->
@@ -16,23 +16,22 @@
 </head>
 <body>
   <div class="container">
-    <h1>Bike Roughness Mapper</h1>
-    <div id="status" aria-live="polite">Ready to record.</div>
+    <h1>FleetSense - Route Intelligence</h1>
+    <div id="status" aria-live="polite">Ready to monitor routes.</div>
 
     <div class="controls">
-      <button id="startButton" class="btn-sm">Start Ride</button>
-      <button id="stopButton" class="btn-sm" disabled>Stop Ride</button>
+      <button id="startButton" class="btn-sm">Start Trip</button>
+      <button id="stopButton" class="btn-sm" disabled>Stop Trip</button>
       <button id="deleteDataButton" class="btn-sm">Clear All Data</button>
-      <button id="bellButton" class="btn-sm" aria-label="Ring bell and say 'On your left'">Bell</button>
 
-      <!-- Viewfinder + Recording -->
+      <!-- Documentation + Recording -->
       <button id="viewfinderToggle" class="btn-sm" aria-label="Toggle viewfinder and start/stop recording">
-        ▶︎ Viewfinder + Record
+        ▶︎ Document Route
       </button>
       <span id="recIndicator" class="rec-dot hidden" aria-hidden="true"></span>
     </div>
 
-    <div id="dataPointsCounter">Data Points: 0</div>
+    <div id="dataPointsCounter">Route Data Points: 0</div>
 
     <!-- Main map (Leaflet visible map) -->
     <div id="map"></div>
@@ -47,22 +46,22 @@
       <video id="viewfinder" playsinline muted></video>
     </div>
 
-    <!-- Live vibration chart -->
+    <!-- Live road condition chart -->
     <canvas id="vibrationChart" height="200" style="width:100%; margin-bottom:20px;"></canvas>
 
-    <h2>Past Rides</h2>
+    <h2>Previous Trips</h2>
     <ul id="pastRidesList"></ul>
 
     <!-- Download link after recording -->
     <div id="downloadRow" class="hidden">
-      <a id="lastRecordingLink" download>Download last recording</a>
+      <a id="lastRecordingLink" download>Download last trip recording</a>
     </div>
   </div>
 
-  <!-- Ride Detail Overlay -->
+  <!-- Trip Detail Overlay -->
   <div id="rideDetailView" class="hidden">
     <div class="detail-header">
-      <h3>Ride Details</h3>
+      <h3>Trip Details</h3>
       <button id="closeDetailButton" class="btn-sm">Close</button>
     </div>
 

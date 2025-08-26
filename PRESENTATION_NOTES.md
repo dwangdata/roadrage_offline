@@ -1,47 +1,50 @@
-# RoadSense: Presentation Speaker Notes & Timing Guide
+# FleetSense: Presentation Speaker Notes & Timing Guide
 
 ## Presentation Overview
 - **Total Duration**: 10 minutes
-- **Demo Time**: 2 minutes (integrated into slides 4)
+- **Demo Time**: 2 minutes (integrated into slide 4)
 - **Q&A**: 1 minute
 - **Content**: 7 minutes structured across 10 slides
+- **Audience**: Internal team members, VPs, and CEO
 
 ---
 
 ## Slide 1: The Hook - Opening Statement (1 minute)
 ### Speaking Notes:
-*Walk to center stage, make eye contact with audience*
+*Walk to center position, make eye contact with leadership team*
 
-"Good morning everyone. Before I begin, I want you to imagine something. You're cycling to work tomorrow morning, and you hit a pothole so hard it nearly throws you off your bike. Your phone cracks, your coffee spills, and you start your day frustrated and potentially injured. 
-
-Now imagine if that pothole could have been avoided entirely - if your phone had warned you about it beforehand, or if the city had already fixed it based on data from other cyclists who encountered it last week.
+"Good morning everyone. Before I begin, I want you to think about our operations last week. How many times did our drivers report vehicle damage from poor road conditions? How many trips were delayed because a route was worse than expected? How much did we spend on unscheduled maintenance because our trucks hit road hazards we could have avoided?
 
 *Pause for effect*
 
-Every day, millions of cyclists navigate urban streets blindly, hitting potholes, rough patches, and dangerous road conditions. What if we could change that? What if every bike ride could contribute to making cycling safer and cities smarter?
+Every week, our trucks travel thousands of miles to remote drill sites, battling poor road conditions that cost us money in maintenance, delays, and inefficiency. What if we could change that? What if every truck trip could contribute to optimizing our routes and helping us advocate for infrastructure improvements on the roads that matter most to our business?
 
-Today we're introducing RoadSense - the world's first crowdsourced bike roughness mapping platform that turns every smartphone into a smart sensor for urban infrastructure."
+*Direct eye contact with CEO*
+
+Today I'm introducing FleetSense - an intelligent road quality monitoring system that turns every company smartphone into a smart sensor for optimizing our fleet operations and improving the roads we depend on."
 
 ### Visual Cues:
-- Show split-screen image: frustrated cyclist vs. smooth cycling
-- Transition to RoadSense logo
-- Display tagline: "Smart Cities Start With Smart Data"
+- Show split-screen image: truck operational challenges vs. efficient fleet operations
+- Transition to FleetSense logo
+- Display tagline: "Smart Fleet Operations Through Intelligent Route Intelligence"
 
 ---
 
 ## Slide 2: The Problem We're Solving (1 minute)
 ### Speaking Notes:
-*Move to screen, gesture to statistics*
+*Move toward display, gesture to operational data*
 
-"Let's talk numbers, because the problem is bigger than you might think.
+"Let's talk about our specific challenges, because the numbers tell a clear story.
 
-Cities globally spend $600 billion dollars every year on urban road maintenance - that's more than most countries' entire GDP. Yet despite this massive investment, 40% of cyclists still avoid certain routes because of poor road conditions.
+We're spending $50,000 annually on vehicle maintenance that's directly related to poor road conditions - that's money that could be going to operational improvements or equipment upgrades. 15% of our trips experience significant delays because we don't know route conditions ahead of time.
 
-Why? Because cities are playing catch-up. They're reactive, not proactive. They fix problems after they become dangerous, after accidents happen, after citizens complain.
+More critically, access to some of our drill sites is being compromised by unpredictable road quality, and we have no systematic way to gather intelligence on route conditions for strategic planning.
 
-Meanwhile, insurance costs continue to rise due to cycling accidents from road hazards, and cities struggle with limited budgets trying to maintain aging infrastructure.
+*Gesture toward leadership team*
 
-The missing piece? Real-time, crowdsourced road quality data at street level. Cities are making billion-dollar infrastructure decisions with decade-old data, when they could be making smart decisions with real-time insights from actual road users."
+We're making operational decisions reactively instead of proactively. We fix problems after they cost us money, after they delay our operations, after they impact our bottom line.
+
+The missing piece? Real-time, systematic road quality intelligence for the routes that matter most to our business, so we can make smart operational decisions instead of hoping for the best."
 
 ### Visual Cues:
 - Infographic showing global spending on road maintenance
