@@ -165,7 +165,7 @@ button:disabled { background-color: #cccccc; cursor: not-allowed; box-shadow: no
   object-fit: cover;
 }
 
-/* Android compositor canvas wraps both map + camera into one canvas */
+/* Android compositor canvas wraps recorded view */
 #compositorWrap {
   height: 350px;
   width: 100%;
