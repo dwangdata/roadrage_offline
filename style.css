@@ -30,7 +30,7 @@ h1, h2, h3 {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-/* Shrink map slightly when viewfinder is active to fit both */
+/* When viewfinder is active, shrink map to fit both on screen */
 .with-viewfinder #map { height: 300px; }
 
 #status {
@@ -65,28 +65,23 @@ button {
 /* Compact variant */
 .btn-sm { padding: 8px 12px; font-size: 0.9rem; border-radius: 8px; }
 
-/* Colors */
-button#startButton { background-color: #28a745; color: white; }
-button#startButton:not(:disabled):hover { background-color: #218838; transform: translateY(-1px); }
+/* Button colors */
+#startButton { background-color: #28a745; color: white; }
+#startButton:not(:disabled):hover { background-color: #218838; transform: translateY(-1px); }
 
-button#stopButton { background-color: #dc3545; color: white; }
-button#stopButton:not(:disabled):hover { background-color: #c82333; transform: translateY(-1px); }
+#stopButton { background-color: #dc3545; color: white; }
+#stopButton:not(:disabled):hover { background-color: #c82333; transform: translateY(-1px); }
 
-button#deleteDataButton { background-color: #ffc107; color: #212529; }
-button#deleteDataButton:not(:disabled):hover { background-color: #e0a800; transform: translateY(-1px); }
+#deleteDataButton { background-color: #ffc107; color: #212529; }
+#deleteDataButton:not(:disabled):hover { background-color: #e0a800; transform: translateY(-1px); }
 
-button#bellButton { background-color: #17a2b8; color: white; }
-button#bellButton:not(:disabled):hover { background-color: #138496; transform: translateY(-1px); }
+#bellButton { background-color: #17a2b8; color: white; }
+#bellButton:not(:disabled):hover { background-color: #138496; transform: translateY(-1px); }
 
-/* Viewfinder toggle default style (inherits) */
 #viewfinderToggle { background-color: #6c63ff; color: #fff; }
 #viewfinderToggle:not(:disabled):hover { background-color: #5b52ee; transform: translateY(-1px); }
 
-button:disabled {
-  background-color: #cccccc;
-  cursor: not-allowed;
-  box-shadow: none;
-}
+button:disabled { background-color: #cccccc; cursor: not-allowed; box-shadow: none; }
 
 #dataPointsCounter {
   text-align: center;
@@ -111,11 +106,7 @@ button:disabled {
   transition: background-color 0.2s ease, transform 0.06s ease;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
-
-#pastRidesList li:hover {
-  background-color: #eaf7fc;
-  transform: translateY(-2px);
-}
+#pastRidesList li:hover { background-color: #eaf7fc; transform: translateY(-2px); }
 
 .hidden { display: none !important; }
 
@@ -138,7 +129,6 @@ button:disabled {
   align-items: center;
   margin-bottom: 16px;
 }
-
 .detail-header button {
   background-color: #007bff;
   color: white;
@@ -159,7 +149,7 @@ button:disabled {
   overflow-y: auto;
 }
 
-/* Viewfinder container */
+/* Viewfinder container (desktop path) */
 #viewfinderContainer {
   height: 260px;
   width: 100%;
@@ -169,11 +159,26 @@ button:disabled {
   background: #000;
   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
-
 #viewfinder {
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+/* Android compositor canvas wraps both map + camera into one canvas */
+#compositorWrap {
+  height: 350px;
+  width: 100%;
+  margin: 20px 0;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #000;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+#compositorCanvas {
+  width: 100%;
+  height: 100%;
+  display: block;
 }
 
 /* Recording indicator (pulsing red dot) */
@@ -188,7 +193,6 @@ button:disabled {
   animation: pulse 1.2s infinite;
   vertical-align: middle;
 }
-
 @keyframes pulse {
   0%   { box-shadow: 0 0 0 0 rgba(225,6,0, 0.7); }
   70%  { box-shadow: 0 0 0 8px rgba(225,6,0, 0); }
