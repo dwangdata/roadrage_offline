@@ -1,14 +1,10 @@
-// --- Config (Android fallback needs a CORS-enabled tile style) ---
-const MAPTILER_KEY = 'uKsg8OrW5Dd8zxyaMS0F'; // ← put your key
-const MAP_STYLE_URL = `https://api.maptiler.com/maps/streets/style.json?key=${MAPTILER_KEY}`;
-
 // --- Globals & State ---
 let db, currentRideId = null;
 let currentRideDataPoints = [], accelerometerBuffer = [];
 let latestGpsPosition = null, watchId = null, motionListenerActive = false;
 let dataCollectionInterval = null, lastLowPassZ = 0;
 
-// Live map (Leaflet - desktop path)
+// Visible Leaflet map (full UI)
 let map, currentLocationMarker, currentRidePath, historicalRoughnessLayer;
 let mapInitialized = false;
 
@@ -22,7 +18,7 @@ let recapMap, recapRidePath, recapHistoricalLayer, recapChart, recapHighlight;
 let statusDiv, startButton, stopButton, dataPointsCounter, deleteDataButton, bellButton;
 let pastRidesList, rideDetailView, detailContent, closeDetailButton;
 
-// Audio (recorded)
+// Audio (recorded UI sounds)
 let bellSound, voiceSound;
 
 // Constants
@@ -42,41 +38,40 @@ let recordedChunks = [];
 let recordingMime = '';
 let viewfinderActive = false;
 
-// Android fallback (Canvas Compositor)
-let compositorWrap, compositorCanvas, compositorCtx;
-let mlMap = null;            // MapLibre GL map instance
-let mlCanvas = null;         // MapLibre's internal canvas
-let compositorRAF = 0;
+// Android fallback (Leaflet offscreen → compositor)
+let compositorWrap, compositorCanvas, compositorCtx, compositorRAF = 0;
+let offMapDiv = null, offMap = null, offRenderer = null;
+let offRidePath = null, offHistoricalLayer = null, offCurrentMarker = null;
 
-// MapLibre live route plumbing (shows on the map itself)
-const ML_RIDE_SOURCE = 'ride-segments';
-const ML_RIDE_LAYER  = 'ride-line';
-let rideFeatureCollection = { type: 'FeatureCollection', features: [] }; // segments with per-segment color
+// Capability detection
+const isScreenCaptureSupported = !!(navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia);
+const isAndroid = /Android/i.test(navigator.userAgent);
 
-// Simple path store (also used for MapLibre updates)
-const pathPoints = []; // [{lat, lon, rough}]
-
-// --- Helpers ---
+// --- IndexedDB Helper ---
 function promisifiedDbRequest(req) {
   return new Promise((res, rej) => {
     req.onsuccess = e => res(e.target.result);
     req.onerror   = e => rej(e.target.error);
   });
 }
+
+// --- Utility Functions ---
 function calculateVariance(arr) {
   if (!arr.length) return 0;
   const mean = arr.reduce((s, v) => s + v, 0) / arr.length;
   return arr.reduce((s, v) => s + (v - mean) ** 2, 0) / arr.length;
 }
 function getGeoId(lat, lon, prec = 4) { return `${lat.toFixed(prec)}_${lon.toFixed(prec)}`; }
+function toRad(d) { return d * Math.PI / 180; }
+function dist(lat1, lon1, lat2, lon2) {
+  const R = 6371e3, φ1 = toRad(lat1), φ2 = toRad(lat2), dφ = toRad(lat2 - lat1), dλ = toRad(lon2 - lon1);
+  const a = Math.sin(dφ/2)**2 + Math.cos(φ1)*Math.cos(φ2)*Math.sin(dλ/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
 function roughnessToColor(r) {
   for (let i = 0; i < ROUGH_THRESHOLDS.length; i++) if (r <= ROUGH_THRESHOLDS[i]) return ROUGH_COLORS[i];
   return ROUGH_COLORS[ROUGH_COLORS.length - 1];
 }
-
-// --- Capability detection ---
-const isScreenCaptureSupported = !!(navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia);
-const isAndroid = /Android/i.test(navigator.userAgent);
 
 // --- DB Initialization ---
 function openDb() {
@@ -107,11 +102,11 @@ function openDb() {
   });
 }
 
-// --- Map Initialization (Leaflet) ---
+// --- Visible Map Initialization (Leaflet) ---
 function initializeMap() {
   if (mapInitialized) return;
   const mapEl = document.getElementById('map');
-  if (!mapEl) return;
+  if (!mapEl) { console.warn('Map element not found'); return; }
   map = L.map('map').setView([51.0447, -114.0719], 13);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '&copy; OpenStreetMap contributors'
@@ -122,7 +117,7 @@ function initializeMap() {
   mapInitialized = true;
 }
 
-// --- Live Chart ---
+// --- Live Chart Initialization ---
 function initChart() {
   const canvas = document.getElementById('vibrationChart');
   if (!canvas) return;
@@ -149,10 +144,11 @@ function initChart() {
   });
 }
 
-// --- Recap Map & Chart (Leaflet) ---
+// --- Recap Map & Chart Initialization ---
 function initRecapMap() {
   if (recapMap) recapMap.remove();
-  const recapEl = document.getElementById('recapMap'); if (!recapEl) return;
+  const recapEl = document.getElementById('recapMap');
+  if (!recapEl) return;
   recapMap = L.map('recapMap').setView([51.0447, -114.0719], 13);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap contributors' }).addTo(recapMap);
   setTimeout(() => recapMap.invalidateSize(), 200);
@@ -160,7 +156,8 @@ function initRecapMap() {
   recapRidePath = L.polyline([], { weight: 5 }).addTo(recapMap);
 }
 function initRecapChart() {
-  const canvas = document.getElementById('recapChart'); if (!canvas) return;
+  const canvas = document.getElementById('recapChart');
+  if (!canvas) return;
   const ctx = canvas.getContext('2d');
   if (recapChart) recapChart.destroy();
   recapChart = new Chart(ctx, {
@@ -185,13 +182,7 @@ function initRecapChart() {
   });
 }
 
-// --- Historical helpers (Leaflet UI) ---
-function toRad(d) { return d * Math.PI / 180; }
-function dist(lat1, lon1, lat2, lon2) {
-  const R = 6371e3, φ1 = toRad(lat1), φ2 = toRad(lat2), dφ = toRad(lat2 - lat1), dλ = toRad(lon2 - lon1);
-  const a = Math.sin(dφ/2)**2 + Math.cos(φ1)*Math.cos(φ2)*Math.sin(dλ/2)**2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
+// --- Historical Overlay Helper (Visible Map) ---
 async function updateHistoricalDisplay(lat, lon, layerGroup) {
   if (!db || !layerGroup) return;
   layerGroup.clearLayers();
@@ -200,35 +191,51 @@ async function updateHistoricalDisplay(lat, lon, layerGroup) {
   all.forEach(pt => {
     if (dist(lat, lon, pt.latitude, pt.longitude) <= HIST_RADIUS) {
       L.circleMarker([pt.latitude, pt.longitude], {
-        radius: 4, fillColor: roughnessToColor(pt.roughnessValue),
+        radius: 4,
+        fillColor: roughnessToColor(pt.roughnessValue),
         color: '#000', weight: 1, opacity: 0.7, fillOpacity: 0.7
-      }).bindPopup(`Roughness: ${pt.roughnessValue.toFixed(2)}<br>Updated: ${new Date(pt.lastUpdated).toLocaleDateString()}`)
-        .addTo(layerGroup);
+      })
+      .bindPopup(
+        `Roughness: ${pt.roughnessValue.toFixed(2)}<br>` +
+        `Updated: ${new Date(pt.lastUpdated).toLocaleDateString()}`
+      )
+      .addTo(layerGroup);
     }
   });
   await tx.complete;
 }
+
 async function showAllHistoricalData() {
   if (!db || !historicalRoughnessLayer) return;
   historicalRoughnessLayer.clearLayers();
   const tx = db.transaction('RoughnessMap', 'readonly');
-  const allPoints = await promisifiedDbRequest(tx.objectStore('RoughnessMap').getAll());
+  const store = tx.objectStore('RoughnessMap');
+  const allPoints = await promisifiedDbRequest(store.getAll());
+  
   allPoints.forEach(pt => {
     L.circleMarker([pt.latitude, pt.longitude], {
-      radius: 4, fillColor: roughnessToColor(pt.roughnessValue),
+      radius: 4,
+      fillColor: roughnessToColor(pt.roughnessValue),
       color: '#000', weight: 1, opacity: 0.7, fillOpacity: 0.7
-    }).bindPopup(`Roughness: ${pt.roughnessValue.toFixed(2)}<br>Updated: ${new Date(pt.lastUpdated).toLocaleDateString()}`)
-      .addTo(historicalRoughnessLayer);
+    })
+    .bindPopup(
+      `Roughness: ${pt.roughnessValue.toFixed(2)}<br>` +
+      `Updated: ${new Date(pt.lastUpdated).toLocaleDateString()}`
+    )
+    .addTo(historicalRoughnessLayer);
   });
+
   await tx.complete;
 }
 
-// --- Hover highlights (Leaflet) ---
+// --- Highlight on Hover ---
 function highlightPointOnMap(idx) {
   if (!chartDataset[idx] || !map) return;
   const dp = chartDataset[idx].meta;
   if (recapHighlight) map.removeLayer(recapHighlight);
-  recapHighlight = L.circleMarker([dp.latitude, dp.longitude], { radius: 10, color: '#f00', weight: 2, fill: false }).addTo(map);
+  recapHighlight = L.circleMarker([dp.latitude, dp.longitude], {
+    radius: 10, color: '#f00', weight: 2, fill: false
+  }).addTo(map);
   setTimeout(() => { if (recapHighlight && map) map.removeLayer(recapHighlight); }, 3000);
 }
 function highlightRecapPointOnMap(idx) {
@@ -236,11 +243,13 @@ function highlightRecapPointOnMap(idx) {
   if (!data || !data[idx] || !recapMap) return;
   const dp = data[idx].meta;
   if (recapHighlight) recapMap.removeLayer(recapHighlight);
-  recapHighlight = L.circleMarker([dp.latitude, dp.longitude], { radius: 10, color: '#f00', weight: 2, fill: false }).addTo(recapMap);
+  recapHighlight = L.circleMarker([dp.latitude, dp.longitude], {
+    radius: 10, color: '#f00', weight: 2, fill: false
+  }).addTo(recapMap);
   setTimeout(() => { if (recapHighlight && recapMap) recapMap.removeLayer(recapHighlight); }, 3000);
 }
 
-// --- Sensor callbacks ---
+// --- Sensor Callbacks ---
 function gpsSuccess(pos) { latestGpsPosition = pos; }
 function gpsError(err) {
   const msgs = {1:'Permission denied',2:'Unavailable',3:'Timed out'};
@@ -255,7 +264,7 @@ function handleMotion(evt) {
   }
 }
 
-// --- Data loop ---
+// --- Core Data Loop ---
 async function processCombinedDataPoint() {
   if (!currentRideId || !latestGpsPosition) {
     statusDiv && (statusDiv.textContent = 'Waiting for GPS…');
@@ -266,28 +275,29 @@ async function processCombinedDataPoint() {
   const roughness = calculateVariance(accelerometerBuffer);
   accelerometerBuffer = [];
 
-  const dp = { id: crypto.randomUUID(), rideId: currentRideId, timestamp, latitude, longitude, altitude, accuracy, roughnessValue: roughness };
+  const dp = {
+    id: crypto.randomUUID(),
+    rideId: currentRideId,
+    timestamp, latitude, longitude, altitude, accuracy,
+    roughnessValue: roughness
+  };
+
   currentRideDataPoints.push(dp);
   dataPointsCounter && (dataPointsCounter.textContent = `Data Points: ${currentRideDataPoints.length}`);
-
   await updateRoughnessMap(dp);
   updateMapDisplay(dp);
+  updateOffscreenMapDisplay(dp); // keep the offscreen Leaflet in sync
 
-  // Chart
   if (vibrationChart) {
     const pt = { x: new Date(timestamp), y: roughness, meta: dp };
     chartDataset.push(pt);
     vibrationChart.update();
   }
 
-  // For Android compositor/MapLibre route
-  onMlNewPoint({ lat: dp.latitude, lon: dp.longitude, rough: dp.roughnessValue });
-
-  statusDiv && (statusDiv.textContent =
-    `Lat ${latitude.toFixed(4)}, Lon ${longitude.toFixed(4)}, Rough ${roughness.toFixed(2)}`);
+  statusDiv && (statusDiv.textContent = `Lat ${latitude.toFixed(4)}, Lon ${longitude.toFixed(4)}, Rough ${roughness.toFixed(2)}`);
 }
 
-// --- Roughness map (DB) ---
+// --- RoughnessMap Management ---
 async function updateRoughnessMap(dp) {
   const geoId = getGeoId(dp.latitude, dp.longitude);
   const tx = db.transaction('RoughnessMap', 'readwrite');
@@ -295,25 +305,36 @@ async function updateRoughnessMap(dp) {
   const existingRecord = await promisifiedDbRequest(store.get(geoId));
 
   if (existingRecord) {
-    const updatedRecord = { ...existingRecord, roughnessValue: dp.roughnessValue, lastUpdated: dp.timestamp };
+    const updatedRecord = {
+      ...existingRecord,
+      roughnessValue: dp.roughnessValue,
+      lastUpdated: dp.timestamp
+    };
     await promisifiedDbRequest(store.put(updatedRecord));
   } else {
-    const newRecord = { geoId, latitude: dp.latitude, longitude: dp.longitude, roughnessValue: dp.roughnessValue, lastUpdated: dp.timestamp };
+    const newRecord = {
+      geoId: geoId,
+      latitude: dp.latitude,
+      longitude: dp.longitude,
+      roughnessValue: dp.roughnessValue,
+      lastUpdated: dp.timestamp
+    };
     await promisifiedDbRequest(store.add(newRecord));
   }
+  
   await tx.complete;
 }
 
-// --- Leaflet live map update ---
+// --- Live Map Rendering (Visible) ---
 function updateMapDisplay(dp) {
   if (!mapInitialized || !map) return;
   const latlng = [dp.latitude, dp.longitude];
   if (!currentLocationMarker) currentLocationMarker = L.marker(latlng).addTo(map);
-  else currentLocationMarker.setLatLng(latlng);
+  else                          currentLocationMarker.setLatLng(latlng);
   map.setView(latlng, Math.max(map.getZoom(), 15));
 
   const path = currentRidePath.getLatLngs();
-  const col = roughnessToColor(dp.roughnessValue);
+  const col  = roughnessToColor(dp.roughnessValue);
   if (path.length) {
     const prev = path[path.length - 1];
     L.polyline([prev, latlng], { color: col, weight: 5 }).addTo(map);
@@ -321,6 +342,85 @@ function updateMapDisplay(dp) {
   currentRidePath.addLatLng(latlng);
 
   updateHistoricalDisplay(dp.latitude, dp.longitude, historicalRoughnessLayer);
+}
+
+// =======================
+// ANDROID FALLBACK: Leaflet offscreen map → compositor canvas
+// =======================
+
+function ensureOffscreenLeaflet() {
+  if (offMap) return;
+  // Create offscreen container
+  offMapDiv = document.createElement('div');
+  offMapDiv.style.cssText = 'position:absolute;left:-9999px;top:-9999px;width:600px;height:350px;';
+  document.body.appendChild(offMapDiv);
+
+  // Create a dedicated canvas renderer for vector-only drawing
+  offRenderer = L.canvas({ padding: 0.5 });
+
+  // Init offscreen map WITHOUT tile layer (vector only)
+  offMap = L.map(offMapDiv, {
+    zoomControl: false,
+    attributionControl: false,
+    preferCanvas: true, // force canvas renderer
+  }).setView([51.0447, -114.0719], 13);
+
+  // Layers on offscreen map use the canvas renderer
+  offHistoricalLayer = L.layerGroup(undefined, { renderer: offRenderer }).addTo(offMap);
+  offRidePath = L.polyline([], { weight: 5, renderer: offRenderer }).addTo(offMap);
+  offCurrentMarker = L.circleMarker([51.0447, -114.0719], {
+    radius: 6, color: '#007bff', weight: 2, fillColor: '#cce1ff', fillOpacity: 0.9, renderer: offRenderer
+  }).addTo(offMap);
+
+  // Preload ALL historical roughness points into offscreen layer
+  populateOffscreenHistorical();
+}
+
+// Draw historical points into offscreen layer once (all points)
+async function populateOffscreenHistorical() {
+  if (!db || !offHistoricalLayer) return;
+  offHistoricalLayer.clearLayers();
+  const tx = db.transaction('RoughnessMap', 'readonly');
+  const allPoints = await promisifiedDbRequest(tx.objectStore('RoughnessMap').getAll());
+  allPoints.forEach(pt => {
+    L.circleMarker([pt.latitude, pt.longitude], {
+      radius: 4,
+      fillColor: roughnessToColor(pt.roughnessValue),
+      color: '#000', weight: 1, opacity: 0.7, fillOpacity: 0.7,
+      renderer: offRenderer
+    }).addTo(offHistoricalLayer);
+  });
+  await tx.complete;
+  // Slight delay then force a redraw
+  setTimeout(()=> offMap && offMap.invalidateSize(), 50);
+}
+
+// Keep the offscreen map synced with live data
+function updateOffscreenMapDisplay(dp) {
+  if (!offMap) return;
+  const latlng = [dp.latitude, dp.longitude];
+
+  // Update current marker
+  offCurrentMarker.setLatLng(latlng);
+
+  // Append colored segment to route (same as visible map)
+  const pts = offRidePath.getLatLngs();
+  const col = roughnessToColor(dp.roughnessValue);
+  if (pts.length) {
+    const prev = pts[pts.length - 1];
+    L.polyline([prev, latlng], { color: col, weight: 5, renderer: offRenderer }).addTo(offMap);
+  }
+  offRidePath.addLatLng(latlng);
+
+  // Follow rider
+  offMap.setView(latlng, Math.max(offMap.getZoom(), 15));
+}
+
+// Get the actual canvas element from Leaflet's canvas renderer
+function getOffscreenCanvas() {
+  // Leaflet's canvas renderer stores its canvas in _container
+  // We find the first renderer in the map; since we constructed one, use it.
+  return offRenderer && offRenderer._container ? offRenderer._container : null;
 }
 
 // =======================
@@ -375,13 +475,10 @@ async function startDesktopRecording() {
   statusDiv && (statusDiv.textContent = 'Recording screen + mic. Viewfinder active.');
 }
 
-// ---- Android fallback: compositor canvas (maplibre + camera) + mic
+// ---- Android fallback: offscreen Leaflet canvas (vector-only) + camera PIP + mic
 async function startAndroidCompositorRecording() {
-  // Ensure API key
-  if (!MAPTILER_KEY || MAPTILER_KEY === 'YOUR_MAPTILER_API_KEY_HERE') {
-    statusDiv && (statusDiv.textContent = 'Please set MAPTILER_KEY in script.js for Android recording.');
-    return;
-  }
+  // Ensure offscreen Leaflet exists and is clean
+  ensureOffscreenLeaflet();
 
   // camera
   try {
@@ -398,9 +495,6 @@ async function startAndroidCompositorRecording() {
     });
   } catch (e) { statusDiv && (statusDiv.textContent = 'Unable to access microphone.'); stopTracks(cameraStream); return; }
 
-  // Setup MapLibre map (WebGL canvas) and route layers
-  await mlInitMapAndLayers();
-
   // Compositor canvas sizing
   const wrap = compositorWrap;
   const cvs = compositorCanvas;
@@ -414,12 +508,20 @@ async function startAndroidCompositorRecording() {
   vid.srcObject = cameraStream; vid.muted = true; vid.playsInline = true;
   try { await vid.play(); } catch {}
 
-  // Draw loop: maplibre canvas (already includes route) → camera PIP → HUD
+  // Draw loop: offscreen Leaflet canvas (route + historical + current) → camera PIP → HUD
   const draw = () => {
     compositorCtx.clearRect(0,0,cvs.width,cvs.height);
 
-    // 1) draw maplibre canvas
-    try { compositorCtx.drawImage(mlCanvas, 0, 0, cvs.width, cvs.height); } catch {}
+    // 1) draw the offscreen Leaflet canvas (vector-only)
+    const offCanvas = getOffscreenCanvas();
+    if (offCanvas) {
+      // scale to fit compositor canvas size
+      try { compositorCtx.drawImage(offCanvas, 0, 0, cvs.width, cvs.height); } catch {}
+    } else {
+      // fallback: plain background
+      compositorCtx.fillStyle = '#f8f9fb';
+      compositorCtx.fillRect(0,0,cvs.width,cvs.height);
+    }
 
     // 2) draw camera PIP bottom-right
     const pipW = Math.floor(cvs.width * 0.38);
@@ -457,89 +559,11 @@ async function startAndroidCompositorRecording() {
   // Center map on current position when available
   if (latestGpsPosition?.coords) {
     const { latitude, longitude } = latestGpsPosition.coords;
-    mlMap.jumpTo({ center: [longitude, latitude], zoom: 15 });
+    offMap.setView([latitude, longitude], 15);
   }
 
   setRecordingUI(true, true);
   statusDiv && (statusDiv.textContent = 'Recording (Android fallback): map + camera + mic.');
-}
-
-// ---- MapLibre setup & live route layer (Android)
-async function mlInitMapAndLayers() {
-  if (!mlMap) {
-    const mapDiv = document.createElement('div');
-    mapDiv.style.cssText = 'position:absolute;left:-9999px;top:-9999px;width:600px;height:350px;'; // offscreen
-    document.body.appendChild(mapDiv);
-
-    mlMap = new maplibregl.Map({
-      container: mapDiv,
-      style: MAP_STYLE_URL,
-      center: [-114.0719, 51.0447],
-      zoom: 13,
-      cooperativeGestures: false,
-      attributionControl: false,
-      antialias: true
-    });
-    await new Promise(res => mlMap.once('load', res));
-    mlCanvas = mlMap.getCanvas();
-
-    // Route source + layer (per-segment color via feature property)
-    mlMap.addSource(ML_RIDE_SOURCE, {
-      type: 'geojson',
-      data: rideFeatureCollection
-    });
-    mlMap.addLayer({
-      id: ML_RIDE_LAYER,
-      type: 'line',
-      source: ML_RIDE_SOURCE,
-      paint: {
-        'line-width': 5,
-        'line-opacity': 0.95,
-        'line-color': ['to-color', ['get', 'color']]
-      }
-    });
-  } else {
-    // If map already exists, clear previous ride features
-    rideFeatureCollection = { type: 'FeatureCollection', features: [] };
-    const src = mlMap.getSource(ML_RIDE_SOURCE);
-    if (src) src.setData(rideFeatureCollection);
-  }
-
-  // Also ensure the canvas size maps well to compositor; force a resize tick
-  mlMap.resize();
-  pathPoints.length = 0; // reset path
-}
-
-// Called on each new GPS datapoint
-function onMlNewPoint(pt) {
-  if (!mlMap) return;
-  const src = mlMap.getSource(ML_RIDE_SOURCE);
-  if (!src) return;
-
-  // Append to in-memory path
-  const prev = pathPoints[pathPoints.length - 1];
-  pathPoints.push(pt);
-
-  // Add a new colored segment feature between prev → pt
-  if (prev) {
-    rideFeatureCollection.features.push({
-      type: 'Feature',
-      geometry: {
-        type: 'LineString',
-        coordinates: [
-          [prev.lon, prev.lat],
-          [pt.lon, pt.lat]
-        ]
-      },
-      properties: {
-        color: roughnessToColor(pt.rough)
-      }
-    });
-    src.setData(rideFeatureCollection);
-  }
-
-  // Keep camera roughly centered as you move (lightweight jump)
-  mlMap.jumpTo({ center: [pt.lon, pt.lat] });
 }
 
 async function startMediaRecorder(stream, compositorMode) {
@@ -564,13 +588,12 @@ async function startMediaRecorder(stream, compositorMode) {
 async function startViewfinderAndRecording() {
   if (viewfinderActive) return;
 
-  // Desktop path if available; Android gets compositor by default if screen capture unsupported
   if (isScreenCaptureSupported && !isAndroid) {
-    // show the DOM viewfinder under the map
+    // Desktop path: show real DOM viewfinder and record tab
     viewfinderContainer?.classList.remove('hidden');
     await startDesktopRecording();
   } else {
-    // Android compositor path
+    // Android fallback: offscreen Leaflet + compositor
     await startAndroidCompositorRecording();
   }
 }
@@ -584,7 +607,6 @@ function stopViewfinderAndRecording() {
   stopTracks(micStream); micStream = null;
   if (compositorRAF) cancelAnimationFrame(compositorRAF), compositorRAF = 0;
 
-  // Keep camera alive until onstop to avoid platform quirks; we stop it in saveRecording()
   setRecordingUI(false, compositorWrap && !compositorWrap.classList.contains('hidden'));
   statusDiv && (statusDiv.textContent = 'Finalizing recording…');
 }
@@ -628,14 +650,22 @@ async function startRide() {
   if (currentLocationMarker && map) map.removeLayer(currentLocationMarker);
   if (historicalRoughnessLayer) historicalRoughnessLayer.clearLayers();
 
-  watchId = navigator.geolocation.watchPosition(gpsSuccess, gpsError, { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 });
+  watchId = navigator.geolocation.watchPosition(gpsSuccess, gpsError, {
+    enableHighAccuracy: true, timeout: 10000, maximumAge: 0
+  });
 
   if (typeof DeviceMotionEvent?.requestPermission === 'function') {
     try {
       const resp = await DeviceMotionEvent.requestPermission();
-      if (resp === 'granted') { window.addEventListener('devicemotion', handleMotion); motionListenerActive = true; }
-      else { statusDiv && (statusDiv.textContent = 'Motion permission denied.'); }
-    } catch (e) { statusDiv && (statusDiv.textContent = 'Error requesting motion permission.'); }
+      if (resp === 'granted') {
+        window.addEventListener('devicemotion', handleMotion);
+        motionListenerActive = true;
+      } else {
+        statusDiv && (statusDiv.textContent = 'Motion permission denied.');
+      }
+    } catch (e) {
+      statusDiv && (statusDiv.textContent = 'Error requesting motion permission.');
+    }
   } else {
     window.addEventListener('devicemotion', handleMotion);
     motionListenerActive = true;
@@ -645,8 +675,12 @@ async function startRide() {
 
   const tx = db.transaction('rides', 'readwrite');
   await promisifiedDbRequest(tx.objectStore('rides').add({
-    rideId: currentRideId, startTime: currentRideId, endTime: null,
-    duration: 0, totalDataPoints: 0, status: 'active'
+    rideId: currentRideId,
+    startTime: currentRideId,
+    endTime: null,
+    duration: 0,
+    totalDataPoints: 0,
+    status: 'active'
   }));
   await tx.complete;
 
@@ -657,7 +691,7 @@ async function startRide() {
   }
 
   startButton && (startButton.disabled = true);
-  stopButton && (stopButton.disabled = false);
+  stopButton  && (stopButton.disabled = false);
   statusDiv && (statusDiv.textContent = 'Recording… waiting for GPS.');
 }
 
@@ -677,8 +711,13 @@ async function stopRide() {
     for (const dp of currentRideDataPoints) await promisifiedDbRequest(dpStore.put(dp));
 
     const rr = await promisifiedDbRequest(ridesStore.get(currentRideId));
-    const upd = { ...rr, endTime: Date.now(), duration: Math.floor((Date.now() - rr.startTime)/1000),
-                  totalDataPoints: currentRideDataPoints.length, status: 'completed' };
+    const upd = {
+      ...rr,
+      endTime: Date.now(),
+      duration: Math.floor((Date.now() - rr.startTime)/1000),
+      totalDataPoints: currentRideDataPoints.length,
+      status: 'completed'
+    };
     await promisifiedDbRequest(ridesStore.put(upd));
     await tx.complete;
 
@@ -692,7 +731,7 @@ async function stopRide() {
   accelerometerBuffer = [];
   latestGpsPosition = null;
   startButton && (startButton.disabled = false);
-  stopButton && (stopButton.disabled = true);
+  stopButton  && (stopButton.disabled = true);
   dataPointsCounter && (dataPointsCounter.textContent = 'Data Points: 0');
   if (currentRidePath) currentRidePath.setLatLngs([]);
   if (currentLocationMarker && map) map.removeLayer(currentLocationMarker);
@@ -725,24 +764,42 @@ async function loadPastRides() {
       li.onclick = () => showRideDetails(r.rideId);
       pastRidesList && pastRidesList.appendChild(li);
     });
-  } catch (e) { statusDiv && (statusDiv.textContent = 'Error loading past rides.'); }
+  } catch (e) {
+    statusDiv && (statusDiv.textContent = 'Error loading past rides.');
+  }
 }
 
 async function showRideDetails(rideId) {
   rideDetailView && rideDetailView.classList.remove('hidden');
   detailContent && (detailContent.textContent = 'Loading…');
-  initRecapMap(); initRecapChart();
+
+  initRecapMap();
+  initRecapChart();
 
   const tx = db.transaction(['rides','rideDataPoints'],'readonly');
   const rideRec = await promisifiedDbRequest(tx.objectStore('rides').get(rideId));
-  let dps = await promisifiedDbRequest(tx.objectStore('rideDataPoints').index('by_rideId').getAll(rideId));
+  let dps     = await promisifiedDbRequest(
+    tx.objectStore('rideDataPoints').index('by_rideId').getAll(rideId)
+  );
   await tx.complete;
 
-  if (!rideRec || !Array.isArray(dps) || dps.length === 0) { detailContent && (detailContent.textContent = 'No data for this ride.'); return; }
-
-  dps.sort((a,b)=>a.timestamp - b.timestamp);
-  const chartData = dps.map(dp => ({ x: new Date(dp.timestamp), y: dp.roughnessValue, meta: dp }));
-  recapChart && (recapChart.data.datasets[0].data = chartData, recapChart.update());
+  if (!rideRec || !Array.isArray(dps) || dps.length === 0) {
+    detailContent && (detailContent.textContent = 'No data for this ride.');
+    return;
+  }
+  
+  dps.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+    
+  const chartData = dps.map(dp => ({
+    x: new Date(dp.timestamp),
+    y: dp.roughnessValue,
+    meta: dp
+  }));
+    
+  if (recapChart) {
+    recapChart.data.datasets[0].data = chartData;
+    recapChart.update();
+  }
 
   recapRidePath && recapRidePath.setLatLngs([]);
   recapHistoricalLayer && recapHistoricalLayer.clearLayers();
@@ -761,26 +818,45 @@ async function showRideDetails(rideId) {
     updateHistoricalDisplay(last.latitude, last.longitude, recapHistoricalLayer);
   }
 
-  let txt = `Ride ID: ${rideRec.rideId}\nStart: ${new Date(rideRec.startTime).toLocaleString()}\nEnd: ${new Date(rideRec.endTime).toLocaleString()}\nDuration: ${Math.floor(rideRec.duration/60)}m ${rideRec.duration%60}s\nPoints: ${rideRec.totalDataPoints}\n\n— Data Points —\n`;
+  let txt = `Ride ID: ${rideRec.rideId}\n` +
+            `Start: ${new Date(rideRec.startTime).toLocaleString()}\n` +
+            `End: ${new Date(rideRec.endTime).toLocaleString()}\n` +
+            `Duration: ${Math.floor(rideRec.duration/60)}m ${rideRec.duration%60}s\n` +
+            `Points: ${rideRec.totalDataPoints}\n\n— Data Points —\n`;
   dps.forEach(dp => {
-    txt += `${new Date(dp.timestamp).toLocaleTimeString()} | Lat ${dp.latitude.toFixed(5)}, Lon ${dp.longitude.toFixed(5)} | Rough ${dp.roughnessValue.toFixed(3)}\n`;
+    txt += `${new Date(dp.timestamp).toLocaleTimeString()} | ` +
+           `Lat ${dp.latitude.toFixed(5)}, Lon ${dp.longitude.toFixed(5)} | ` +
+           `Rough ${dp.roughnessValue.toFixed(3)}\n`;
   });
   detailContent && (detailContent.textContent = txt);
 }
-function hideRideDetails() { rideDetailView && rideDetailView.classList.add('hidden'); detailContent && (detailContent.textContent = ''); }
 
-// --- Bell ---
+function hideRideDetails() {
+  rideDetailView && rideDetailView.classList.add('hidden');
+  detailContent && (detailContent.textContent = '');
+}
+
+// --- Bell: recorded audio ---
 function playBell() {
-  if (!bellSound || !voiceSound) { console.warn('Bell audio not loaded'); return; }
-  try { bellSound.currentTime = 0; bellSound.play(); } catch {}
-  try { voiceSound.currentTime = 0; voiceSound.play().catch(()=>{}); } catch {}
+  if (!bellSound || !voiceSound) {
+    console.warn('Bell audio not loaded');
+    return;
+  }
+  try {
+    bellSound.currentTime = 0;
+    bellSound.play();
+  } catch {}
+  try {
+    voiceSound.currentTime = 0;
+    voiceSound.play().catch(()=>{});
+  } catch {}
   if (navigator.vibrate) navigator.vibrate([40, 80, 40]);
 }
 window.playBell = playBell;
 
 // --- Bootstrap ---
 document.addEventListener('DOMContentLoaded', () => {
-  // Refs
+  // Grab refs
   statusDiv         = document.getElementById('status');
   startButton       = document.getElementById('startButton');
   stopButton        = document.getElementById('stopButton');
@@ -792,7 +868,7 @@ document.addEventListener('DOMContentLoaded', () => {
   detailContent     = document.getElementById('detailContent');
   closeDetailButton = document.getElementById('closeDetailButton');
 
-  // Recording UI
+  // New refs for recording UI
   viewfinderEl          = document.getElementById('viewfinder');
   viewfinderContainer   = document.getElementById('viewfinderContainer');
   viewfinderToggleButton= document.getElementById('viewfinderToggle');
@@ -804,7 +880,7 @@ document.addEventListener('DOMContentLoaded', () => {
   compositorWrap   = document.getElementById('compositorWrap');
   compositorCanvas = document.getElementById('compositorCanvas');
 
-  // Init core systems
+  // Initialize core systems
   initializeMap();
   initChart();
   openDb();
@@ -815,15 +891,24 @@ document.addEventListener('DOMContentLoaded', () => {
   bellSound.volume = 1.0;
   voiceSound.volume = 1.0;
 
-  // Listeners
+  // Bind listeners
   startButton && startButton.addEventListener('click', startRide);
   stopButton && stopButton.addEventListener('click', stopRide);
   deleteDataButton && deleteDataButton.addEventListener('click', deleteDatabase);
   closeDetailButton && closeDetailButton.addEventListener('click', hideRideDetails);
   bellButton && bellButton.addEventListener('click', window.playBell);
 
-  viewfinderToggleButton && viewfinderToggleButton.addEventListener('click', () => {
-    if (viewfinderActive) stopViewfinderAndRecording();
-    else startViewfinderAndRecording();
+  // Viewfinder + Record toggle
+  viewfinderToggleButton && viewfinderToggleButton.addEventListener('click', async () => {
+    if (viewfinderActive) {
+      stopViewfinderAndRecording();
+    } else {
+      // Show compositor UI immediately on Android so users see recording area
+      if (!isScreenCaptureSupported || isAndroid) {
+        document.getElementById('map')?.classList.add('hidden');
+        compositorWrap?.classList.remove('hidden');
+      }
+      await startViewfinderAndRecording();
+    }
   });
 });
