@@ -1,253 +1,255 @@
-# Visual Assets & Image Suggestions for RoadSense Presentation
+# Visual Assets & Image Suggestions for FleetSense Presentation
 
 ## Slide 1: The Hook - Opening Statement
 ### Required Images:
 - **Hero Image**: Split screen comparison
-  - Left side: Frustrated cyclist hitting pothole, bike tilted, coffee spilling, cracked phone
-  - Right side: Happy cyclist on smooth road, clear day, city skyline in background
-- **Logo**: RoadSense logo with tagline "Smart Cities Start With Smart Data"
+  - Left side: Company truck stuck on damaged road, driver frustrated, visible vehicle damage, operational delay
+  - Right side: Efficient fleet operations on well-maintained roads, smooth operations, professional drivers
+
+- **Logo**: FleetSense logo with tagline "Smart Fleet Operations Through Intelligent Route Intelligence"
 
 ### Image Sources/Creation:
 ```
 [IMAGE PLACEHOLDER]
-Split Screen Cyclist Comparison
-- Left: Pothole encounter (dramatic, problem-focused)  
-- Right: Smooth cycling experience (aspirational, solution-focused)
-Dimensions: 16:9 aspect ratio for full-screen display
+Split Screen Fleet Operations Comparison
+- Left: Operational challenges (problem-focused)  
+- Right: Efficient operations (solution-focused)
+Dimensions: 16:9 aspect ratio for conference room display
 ```
 
 ## Slide 2: The Problem We're Solving
 ### Required Images:
-- **Problem Infographic**: Urban cycling infrastructure challenges
-  - $600B global spending statistic with currency symbols
-  - 40% cyclist avoidance rate with cyclist icons
-  - Pothole/road damage illustrations
-  - City budget strain visualization
+- **Problem Infographic**: Fleet operational challenges
+  - $50,000 annual maintenance cost statistic with truck and dollar symbols
+  - 15% trip delay rate with clock and truck icons
+  - Vehicle damage illustrations and repair costs
+  - Drill site access challenges and route planning difficulties
 
 ### Visual Layout:
 ```
 [INFOGRAPHIC LAYOUT]
-   $600 BILLION         40% OF CYCLISTS        CITIES STRUGGLE
-  Global Road Spending   Avoid Poor Routes      Limited Budgets
-      [Money icon]       [Cyclist icons]       [City/Building icons]
+   $50,000 ANNUALLY        15% TRIP DELAYS       CRITICAL ACCESS
+  Vehicle Maintenance       Route Conditions      Drill Site Routes
+      [Truck + $ icon]      [Clock + truck icons] [Drill site icons]
       
-   REACTIVE FIXES       NO REAL-TIME DATA      RISING COSTS
-  [Repair truck icon]   [No signal icon]      [Insurance icon]
+   REACTIVE PLANNING       NO ROUTE INTELLIGENCE    RISING COSTS
+  [Repair truck icon]      [No signal icon]        [Cost chart icon]
 ```
 
-## Slide 3: Our Solution - RoadSense Platform  
+## Slide 3: Our Solution - FleetSense Platform  
 ### Required Images:
-- **App Screenshot**: Actual interface from the working application
-  - Map view with color-coded routes (green/yellow/red)
-  - Live roughness detection chart
-  - Control buttons visible
-  - GPS location marker
+- **App Screenshot**: Actual interface adapted for fleet operations
+  - Map view with color-coded routes to drill sites (green/yellow/red)
+  - Live roughness detection chart showing truck-specific data
+  - Fleet-appropriate control buttons (Start Trip, Stop, Documentation)
+  - GPS location markers for drill site locations
 
 ### Screenshot Details:
 ```
-[APP INTERFACE SCREENSHOT]
-Top: "Bike Roughness Mapper" title
-Status: "Recording... Lat 51.0447, Lon -114.0719, Rough 3.24"
-Map: Interactive with colored path overlay
-Chart: Live vibration data
-Controls: Start/Stop, Bell, Viewfinder buttons
-Bottom: "Data Points: 15" counter
+[FLEET APP INTERFACE SCREENSHOT]
+Top: "FleetSense - Route Intelligence" title
+Status: "Monitoring Route... Lat 47.8864, Lon -103.2933, Condition 4.8"
+Map: Interactive with colored path overlay to drill sites
+Chart: Live road condition data for trucks
+Controls: Start Trip/Stop, Documentation, Route Analysis
+Bottom: "Route Data Points: 23" counter
 ```
 
 ### Feature Icons:
-- 🚴‍♂️ Real-time detection
-- 📱 Offline capability  
-- 🗺️ Live mapping
-- 📊 Analytics
-- 🎥 Video recording
-- 🔔 Safety features
+- 🚛 Real-time condition detection for trucks
+- 📱 Offline capability for remote sites 
+- 🗺️ Route intelligence mapping
+- 📊 Operational analytics
+- 🎥 Evidence documentation
+- ⚠️ Route optimization alerts
 
 ## Slide 4: Live Demo
 ### Demo Setup Images:
-- **Demo Environment**: Clean setup showing:
-  - Phone with app running
-  - Screen mirroring to projector
-  - Clear view of interface
-  - Professional presentation environment
+- **Demo Environment**: Professional conference room setup showing:
+  - Phone with FleetSense app running
+  - Screen mirroring to conference room display
+  - Clear view of fleet-focused interface
+  - Professional internal presentation environment
 
 *Note: This slide is primarily live demonstration, minimal static images needed*
 
-## Slide 5: The Market Opportunity
+## Slide 5: The Business Impact
 ### Required Images:
-- **Market Size Visualization**: Concentric circles or layered chart
-  - Outer ring: Smart City Infrastructure ($2.3T)
-  - Middle ring: Urban Mobility Solutions ($350B) 
-  - Inner ring: Cycling & Micro-mobility ($47B)
+- **ROI Visualization**: Professional business chart showing:
+  - Annual savings breakdown: $75,000 total
+  - Maintenance cost reduction: $35,000
+  - Operational efficiency: $25,000  
+  - Risk management: $15,000
 
-### Customer Segment Icons:
+### Customer Benefit Icons:
 ```
-[MARKET DIAGRAM]
-🏛️ City Governments     🚲 Bike Sharing Companies
-📱 Navigation Apps       🛡️ Insurance Companies  
-🏗️ Construction/Maintenance
+[BUSINESS IMPACT DIAGRAM]
+🚛 Fleet Management        📋 Maintenance Planning
+🏛️ Authority Engagement    📊 Performance Metrics  
+🎯 Risk Management
 ```
 
-## Slide 6: Business Model
+## Slide 6: Implementation Strategy
 ### Required Images:
-- **Revenue Stream Diagram**: Four interconnected revenue pillars
-  - Data Licensing: $10K-100K/quarter
-  - SaaS Platform: $50-500/month
-  - API Access: $0.01-0.10/call
-  - Premium Features: $9.99/month
+- **Implementation Timeline**: Three phases with professional project milestones
+  - Phase 1 (Months 1-3): Pilot program with 5 routes
+  - Phase 2 (Months 4-6): Full fleet integration
+  - Phase 3 (Months 7-12): Strategic optimization
 
 ### Visual Layout:
 ```
-[REVENUE STREAMS DIAGRAM]
-    💰 DATA LICENSING        💰 SAAS PLATFORM
-    $10K-$100K/quarter       $50-$500/month
-    [Database icon]          [Dashboard icon]
-    
-    💰 API ACCESS            💰 PREMIUM FEATURES  
-    $0.01-$0.10/call         $9.99/month
-    [API icon]               [Star icon]
+[IMPLEMENTATION TIMELINE]
+PHASE 1: PILOT          PHASE 2: INTEGRATION      PHASE 3: OPTIMIZATION
+5 Routes, $8K           20+ Trucks, $12K          Strategy, $5K ongoing
+[Pilot truck icon]      [Fleet icon]              [Analytics icon]
 ```
 
-## Slide 7: Competitive Advantage
+## Slide 7: Technical Advantages
 ### Required Images:
-- **Comparison Matrix**: RoadSense vs. competitors
-  - Checkmarks for RoadSense advantages
-  - X marks for competitor limitations
-  - Categories: Offline capability, comprehensive data, no hardware, etc.
+- **System Architecture**: Clean technical diagram showing:
+  - Smartphone integration with truck operations
+  - Offline capability indicators
+  - Data flow from trucks to operational systems
+  - Professional technical presentation aesthetic
 
-### Competitive Moat Visualization:
+### Technical Benefits Visualization:
 ```
-[MOAT DIAGRAM]
-           ROADSENSE
-        [Castle/fortress icon]
-    Surrounded by competitive advantages:
-    - First-mover advantage
-    - Network effects  
-    - Offline technology
-    - Comprehensive data
-    - Zero hardware requirement
+[TECH ADVANTAGES DIAGRAM]
+           FLEETSENSE TECHNOLOGY
+        [Smartphone + truck icon]
+    Surrounded by technical advantages:
+    - Proven sensor technology
+    - Zero additional hardware  
+    - Offline operation capability
+    - Simple integration process
+    - Cost-effective implementation
 ```
 
-## Slide 8: Go-to-Market Strategy
+## Slide 8: Strategic Authority Engagement
 ### Required Images:
-- **Timeline Visualization**: Three phases with milestones
-  - Phase 1 (Months 1-6): 3 pilot cities
-  - Phase 2 (Months 7-18): 15 major cities
-  - Phase 3 (Months 19-36): 50+ cities
+- **Partnership Approach**: Professional diagram showing:
+  - Company to transportation authorities relationship
+  - Data flow and evidence sharing
+  - Strategic positioning as infrastructure partner
+  - Regional transportation planning integration
 
-### Geographic Expansion Map:
+### Authority Engagement Framework:
 ```
-[WORLD MAP]
-Phase 1: Portland, Amsterdam, Copenhagen (highlighted)
-Phase 2: 15 cities across NA/Europe (marked)
-Phase 3: 50+ global cities (widespread coverage)
-User growth: 5K → 100K → 1M+
+[AUTHORITY ENGAGEMENT DIAGRAM]
+- Company trucks collect route data
+- Comprehensive analysis and prioritization
+- Evidence-based presentations to authorities
+- Strategic infrastructure partnership development
+[Include: Truck → Data → Analysis → Partnership icons]
 ```
 
-## Slide 9: The Ask - Investment
+## Slide 9: Project Investment
 ### Required Images:
-- **Investment Breakdown**: Pie chart of fund allocation
-  - 40% Engineering (blue)
-  - 30% Sales & Marketing (green)  
-  - 20% Operations (orange)
-  - 10% Legal & Regulatory (purple)
+- **Investment Breakdown**: Professional budget allocation chart
+  - 60% Technology Setup ($15,000)
+  - 25% Training & Deployment ($6,250)  
+  - 10% Hardware ($2,500)
+  - 5% Ongoing Support ($1,250)
 
 ### ROI Visualization:
 ```
-[INVESTMENT BREAKDOWN]
-$2.5M SEED FUNDING
+[PROJECT INVESTMENT BREAKDOWN]
+$25,000 TOTAL INVESTMENT
 
-40% ENGINEERING          30% SALES & MARKETING
-$1.0M                    $750K
-[Code/gear icon]         [Growth chart icon]
+60% TECHNOLOGY               25% TRAINING & DEPLOYMENT
+$15,000                      $6,250
+[Code/tech icon]             [Training icon]
 
-20% OPERATIONS           10% LEGAL & REGULATORY
-$500K                    $250K  
-[Cloud icon]             [Legal/shield icon]
+10% HARDWARE                 5% ONGOING SUPPORT
+$2,500                       $1,250  
+[Device icon]                [Support icon]
+
+Expected Annual Savings: $75,000 (280% ROI)
 ```
 
 ## Slide 10: The Vision
 ### Required Images:
-- **Future City Visualization**: Smart cycling infrastructure
-  - Clean, modern city with bike lanes
-  - Digital overlays showing data flow
-  - Happy cyclists on well-maintained roads
-  - Futuristic but realistic aesthetic
+- **Future Fleet Operations**: Professional visualization showing:
+  - Intelligent fleet operations with real-time routing
+  - Company trucks efficiently navigating optimized routes
+  - Partnership with transportation authorities
+  - Data-driven operational excellence
 
 ### Aspirational Scene:
 ```
-[FUTURE CITY IMAGE]
-- Modern cityscape with integrated bike infrastructure
-- Digital data streams connecting roads
-- Cyclists on smooth, well-maintained paths  
-- Smart city elements (sensors, displays)
-- Clean, sustainable urban environment
+[FUTURE OPERATIONS IMAGE]
+- Professional fleet operations with digital intelligence overlays
+- Trucks efficiently navigating well-maintained routes
+- Real-time operational data integration
+- Strategic partnerships with infrastructure authorities
+- Clean, efficient fleet management environment
 ```
 
 ## Q&A Slide
 ### Required Images:
-- **Team Photo**: Professional headshots or team photo
-- **Contact Information**: Clear, readable contact details
-- **Company Logo**: RoadSense branding
+- **Leadership Team**: Professional photos or team representation
+- **Contact Information**: Clear, professional contact details
+- **Company Branding**: Internal project branding and identification
 
 ### Contact Layout:
 ```
-[TEAM PHOTO]
-Professional group photo or individual headshots
+[LEADERSHIP TEAM REPRESENTATION]
+Professional internal team photos or organizational chart
 
 CONTACT INFORMATION:
-📧 hello@roadsense.app
-🌐 www.roadsense.app  
-🎮 Try our MVP: [GitHub Pages URL]
-📞 [Phone number]
+📧 [project-manager@company.com]
+📞 [Internal extension]
+📋 Project: FleetSense Implementation
+🏢 Department: [Operations/Fleet Management]
 ```
 
 ## Additional Visual Assets Needed
 
 ### Icons & Graphics:
-- RoadSense logo (various formats)
-- Cycling-related icons
+- FleetSense logo (various formats)
+- Fleet/truck-related icons
 - Technology/sensor icons
-- City/infrastructure icons
+- Operations/efficiency icons
 - Data/analytics icons
 
 ### Color Scheme:
 - Primary: Blue (#007bff) - Technology/reliability
-- Secondary: Green (#28a745) - Growth/positive
-- Accent: Orange (#fd7e14) - Energy/innovation  
-- Warning: Red (#dc3545) - Problems/urgency
+- Secondary: Green (#28a745) - Efficiency/positive results
+- Accent: Orange (#fd7e14) - Energy/operational improvement
+- Warning: Red (#dc3545) - Problems/urgent conditions
 - Neutral: Gray (#6c757d) - Supporting elements
 
 ### Typography:
-- Headlines: Bold, sans-serif (Inter/Helvetica)
-- Body: Clean, readable sans-serif
-- Data: Monospace for technical details
+- Headlines: Bold, sans-serif (Inter/Helvetica) - Professional, clear
+- Body: Clean, readable sans-serif - Corporate standard
+- Data: Monospace for technical details - Precise, technical
 
 ### Chart Styles:
-- Clean, modern design
-- Consistent color scheme
+- Clean, professional business design
+- Consistent corporate color scheme
 - Clear labels and legends
-- Professional business aesthetic
+- Executive presentation aesthetic
 
 ## Image Creation Resources
 
 ### Photography Needs:
-- Urban cycling scenes
-- City infrastructure  
+- Fleet operations scenes (trucks, drill sites)
+- Corporate/operational environments
 - Professional team photos
-- Technology/smartphone usage
+- Technology/smartphone usage in fleet context
 
 ### Graphic Design Elements:
-- Custom icons for features
-- Infographic elements
+- Custom icons for operational features
+- Infographic elements for business presentations
 - Chart and diagram templates
-- Brand consistency guidelines
+- Corporate brand consistency guidelines
 
 ### Stock Image Sources:
-- Unsplash (cycling, city scenes)
-- Pexels (technology, urban)
-- Custom illustrations for unique concepts
-- Screenshots from actual application
+- Unsplash (fleet operations, industrial)
+- Pexels (technology, corporate)
+- Custom illustrations for fleet-specific concepts
+- Screenshots from actual FleetSense application
 
 ---
 
-*These visual specifications ensure a professional, cohesive presentation that effectively communicates RoadSense's value proposition through compelling imagery and clear information design.*
+*These visual specifications ensure a professional, cohesive internal presentation that effectively communicates FleetSense's operational value through compelling imagery and clear corporate-appropriate information design.*

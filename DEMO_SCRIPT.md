@@ -1,23 +1,23 @@
-# RoadSense Live Demo Script
+# FleetSense Live Demo Script
 
 ## Demo Preparation Checklist
 
 ### Before the Presentation:
 - [ ] Charge phone to 100%
-- [ ] Test app functionality completely  
-- [ ] Ensure screen mirroring works properly
-- [ ] Have backup demo data loaded
-- [ ] Test audio output (for bell feature)
+- [ ] Test app functionality completely with truck route scenarios  
+- [ ] Ensure screen mirroring works properly in conference room
+- [ ] Have demo data loaded showing drill site routes
+- [ ] Test audio output (remove bell feature, focus on alerts)
 - [ ] Clear previous demo data to start fresh
 - [ ] Verify GPS permissions are granted
-- [ ] Test camera and microphone access
+- [ ] Test camera and microphone access for documentation features
 
 ### Equipment Setup:
-- [ ] Phone with RoadSense app installed
-- [ ] Screen mirroring adapter/software
+- [ ] Phone with FleetSense app configured for truck operations
+- [ ] Screen mirroring adapter/software for conference room presentation
 - [ ] External display or projector
 - [ ] Backup device in case of technical issues
-- [ ] Demo environment with controlled data
+- [ ] Demo environment with truck route data (to drill sites)
 
 ---
 
@@ -26,86 +26,86 @@
 ### Opening (10 seconds)
 *Hold phone up to audience, then connect to screen mirroring*
 
-**"Rather than just tell you about RoadSense, let me show you exactly how it works. I have our app running here, and I'll walk you through a typical ride experience that any cyclist would have."**
+**"Rather than just tell you about FleetSense, let me show you exactly how this transforms our daily operations. I have our system running here, and I'll walk you through what one of our drivers experiences on a typical trip to a drill site."**
 
-*Ensure phone screen is clearly visible to audience via projection*
+*Ensure phone screen is clearly visible to entire audience via projection*
 
 ### Step 1: App Launch & Interface Tour (20 seconds)
 *Open app if not already open, point to key elements*
 
-**"First, launching the app - notice how clean and intuitive this interface is. A cyclist can start using this immediately without any training or setup."**
+**"First, launching FleetSense - notice how clean and driver-friendly this interface is. Our drivers can start using this immediately without any complex training or setup."**
 
 *Point to each element as you mention it:*
-- **"Here's our live map using OpenStreetMap data"**
-- **"These are our simple control buttons - Start Ride, Stop, Bell, and our video recording feature"** 
-- **"This status bar shows exactly what's happening"**
-- **"And this chart at the bottom will show live vibration data"**
+- **"Here's our route map showing our operational area and known drill site locations"**
+- **"These are our simple controls - Start Trip, Stop, and our video documentation feature"** 
+- **"This status bar shows exactly what's happening during the trip"**
+- **"And this chart at the bottom tracks road condition data in real-time"**
 
-### Step 2: Starting a Ride (20 seconds)
-*Tap the "Start Ride" button*
+### Step 2: Starting a Trip (20 seconds)
+*Tap the "Start Trip" button*
 
-**"Now I'm starting a ride. Watch what happens..."**
+**"Now I'm starting a trip to one of our drill sites. Watch what happens..."**
 
 *Point to status changes:*
-- **"It immediately activates GPS tracking and sensor monitoring"**
-- **"The status shows it's requesting permissions and waiting for GPS lock"**
-- **"In a real scenario, this takes just 3-5 seconds outdoors"**
+- **"It immediately activates GPS tracking and sensor monitoring for route analysis"**
+- **"The status shows it's establishing position and initializing data collection"**
+- **"In the field, this takes just a few seconds to establish GPS lock"**
 
-*For demo purposes, simulate GPS acquisition:*
-- **"For our demo, I'll simulate being located here in [current city]"**
+*For demo purposes, simulate trip initiation:*
+- **"For our demo, I'll simulate being on Route 34 heading to the Bakken drill site"**
 
 ### Step 3: Live Roughness Detection (30 seconds)
-*Use pre-loaded demo data or simulate movement*
+*Use pre-loaded demo data or simulate truck movement*
 
-**"Here's where it gets interesting. As I simulate bike movement with sensor data, watch the real-time roughness detection in action."**
+**"Here's where it gets valuable for our operations. As I simulate truck movement with real sensor data, watch the road condition analysis in action."**
 
 *Point to vibration chart updating:*
-- **"See this chart at the bottom? It's analyzing accelerometer data and calculating road quality in real-time"**
-- **"Each spike represents a bump, pothole, or rough surface"**
+- **"See this chart at the bottom? It's analyzing accelerometer data from the truck and calculating road quality in real-time"**
+- **"Each spike represents a pothole, rough patch, or hazardous section that costs us money in maintenance"**
 
 *Show map path being drawn:*
-- **"The route path is being drawn with color coding - green for smooth sections, yellow for moderate roughness, red for very rough areas"**
-- **"Notice how the path color changes as the roughness values change"**
+- **"The route path is being drawn with color coding - green for smooth sections that are efficient for our trucks, yellow for moderate roughness, red for severe conditions that require slower speeds or alternate routes"**
+- **"Notice how the path color changes as we encounter different road conditions"**
 
 *Show status updates:*
-- **"The status bar shows live coordinates and the current roughness value - in this case 3.24, which indicates moderate roughness"**
+- **"The status bar shows live coordinates and the current roughness value - in this case 4.8, which indicates moderate roughness requiring careful driving"**
 
-### Step 4: Historical Data & Crowdsourcing (20 seconds)
+### Step 4: Historical Route Intelligence (20 seconds)
 *Point to historical markers on map*
 
-**"These gray and colored dots you see are historical roughness data from previous rides in our demo dataset. This is how the crowdsourcing aspect works - every ride contributes to a growing database of road conditions."**
+**"These colored dots you see are historical road condition data from previous trips to the same drill sites. This is how our operational intelligence builds over time - every truck trip contributes to a growing database of route conditions."**
 
 *Click on a historical marker if possible:*
-- **"Cyclists can see what conditions to expect on any route based on real data from other users"**
-- **"The more people use RoadSense, the more accurate and comprehensive this data becomes"**
+- **"Our drivers can see what conditions to expect on any route based on real data from previous trips"**
+- **"The more our trucks use FleetSense, the more accurate and comprehensive this intelligence becomes for route planning and operational efficiency"**
 
-### Step 5: Video Recording Feature (20 seconds)
+### Step 5: Video Documentation Feature (20 seconds)
 *Tap the "Viewfinder + Record" button*
 
-**"Here's something unique - RoadSense can record comprehensive video documentation of rides."**
+**"Here's something critical for our authority engagement strategy - FleetSense documents comprehensive video evidence of road conditions."**
 
 *Show viewfinder appearing:*
-- **"This activates the rear camera for recording the road ahead"**
-- **"It combines video feed with GPS data and sensor readings"**
-- **"This is invaluable for insurance claims, reporting road hazards to city authorities, or just documenting great rides"**
+- **"This activates the camera for recording road conditions ahead"**
+- **"It synchronizes video feed with GPS data and roughness measurements"**
+- **"This documentation is invaluable for presenting evidence to transportation authorities when requesting infrastructure improvements on our critical routes"**
 
 *Show recording indicator:*
-- **"The red dot indicates we're recording, and all data is synchronized"**
+- **"The red dot indicates we're recording, and all data streams are synchronized for comprehensive documentation"**
 
-### Step 6: Safety Features (10 seconds)
-*Tap the Bell button*
+### Step 6: Operational Intelligence (10 seconds)
+*Show data analysis features*
 
-**"We also include safety features like this bell button that plays both an audio bell and voice saying 'On your left' - essential for safe urban cycling."**
+**"Beyond real-time monitoring, FleetSense provides actionable operational intelligence - route comparisons, cost impact analysis, and data-driven recommendations for route optimization and maintenance planning."**
 
-*Let audio play briefly if possible*
+*Show analytics if available*
 
 ### Demo Wrap-up (10 seconds)
 *Stop recording, return to main interface*
 
-**"The entire experience is seamless, automatic, and provides immediate value to cyclists while contributing to a larger database that benefits everyone. And remember - this works completely offline, so no data usage or connectivity concerns."**
+**"The entire experience is seamless, automatic, and provides immediate operational value while building a comprehensive intelligence database that improves our efficiency and helps us advocate for infrastructure improvements on routes critical to our business. And remember - this works completely offline in remote areas, so no connectivity concerns at drill sites."**
 
 *Show data points counter:*
-- **"You can see we've collected [X] data points in just this short demo"**
+- **"You can see we've collected [X] data points in just this short demo - imagine the intelligence we'll build with 20+ trucks operating daily"**
 
 ---
 

@@ -1,17 +1,17 @@
-# RoadSense: Bike Roughness Mapper MVP
+# FleetSense: Intelligent Road Quality Monitoring for Fleet Operations
 
 ## Project Overview
 
-RoadSense is a revolutionary Progressive Web Application (PWA) that transforms smartphones into intelligent sensors for mapping road quality in real-time. Using device accelerometer data combined with GPS tracking, it creates the world's first crowdsourced bike roughness mapping system.
+FleetSense is an intelligent road quality monitoring system that transforms company smartphones into smart sensors for optimizing fleet operations. Using device accelerometer data combined with GPS tracking, it creates comprehensive intelligence about road conditions on routes critical to drilling operations and enables data-driven operational decisions.
 
-### 🚴‍♂️ Key Features
-- **Real-time Road Quality Detection**: Uses smartphone sensors to measure bike vibrations
-- **Offline-First Architecture**: Full functionality without internet connectivity
-- **Live Route Mapping**: Interactive maps with color-coded roughness indicators
-- **Historical Data Overlay**: Crowdsourced road conditions from previous rides
-- **Multi-Stream Recording**: Video, audio, GPS, and sensor data synchronization
-- **Safety Features**: Automated bell alerts and voice announcements
-- **Comprehensive Analytics**: Real-time charts and ride insights
+### 🚛 Key Features
+- **Real-time Road Quality Detection**: Uses smartphone sensors to measure vehicle vibrations and road conditions
+- **Offline-First Architecture**: Full functionality without internet connectivity during remote site trips
+- **Route Intelligence Mapping**: Interactive maps with color-coded roughness indicators for operational routes
+- **Historical Trip Data**: Company-controlled road condition database from previous trips
+- **Comprehensive Documentation**: Video, audio, GPS, and sensor data synchronization
+- **Authority Engagement Tools**: Evidence-based data for infrastructure improvement advocacy
+- **Operational Analytics**: Real-time analysis and cost impact insights
 
 ### 🛠️ Technology Stack
 - **Frontend**: HTML5, CSS3, JavaScript (ES6+)
@@ -23,33 +23,33 @@ RoadSense is a revolutionary Progressive Web Application (PWA) that transforms s
 
 ## 📊 Business Presentation Materials
 
-This repository includes comprehensive business presentation materials for pitching RoadSense as a business opportunity:
+This repository includes comprehensive business presentation materials for pitching FleetSense as an operational improvement initiative for company fleet operations:
 
 ### 📁 Presentation Documents
-- **[BUSINESS_PRESENTATION.md](BUSINESS_PRESENTATION.md)** - Complete 10-minute slide deck with speaker notes
-- **[EXECUTIVE_SUMMARY.md](EXECUTIVE_SUMMARY.md)** - Detailed business case and market analysis  
-- **[PRESENTATION_NOTES.md](PRESENTATION_NOTES.md)** - Comprehensive speaking notes with timing
-- **[DEMO_SCRIPT.md](DEMO_SCRIPT.md)** - Step-by-step live demonstration guide
-- **[VISUAL_ASSETS_GUIDE.md](VISUAL_ASSETS_GUIDE.md)** - Visual specifications and image requirements
+- **[BUSINESS_PRESENTATION.md](BUSINESS_PRESENTATION.md)** - Complete 10-minute slide deck for internal leadership presentation
+- **[EXECUTIVE_SUMMARY.md](EXECUTIVE_SUMMARY.md)** - Detailed business case and operational impact analysis  
+- **[PRESENTATION_NOTES.md](PRESENTATION_NOTES.md)** - Comprehensive speaking notes with timing for internal pitch
+- **[DEMO_SCRIPT.md](DEMO_SCRIPT.md)** - Step-by-step live demonstration guide adapted for fleet operations
+- **[VISUAL_ASSETS_GUIDE.md](VISUAL_ASSETS_GUIDE.md)** - Visual specifications and image requirements for truck fleet context
 
 ### 🎯 Presentation Structure (10 Minutes Total)
-1. **The Hook** (1 min) - Problem statement and attention grabber
-2. **Market Problem** (1 min) - $600B infrastructure challenge  
-3. **Our Solution** (1.5 min) - RoadSense platform overview
-4. **Live Demo** (2 min) - Interactive application demonstration
-5. **Market Opportunity** (1 min) - $350B market potential
-6. **Business Model** (1 min) - Multiple revenue streams
-7. **Competitive Advantage** (1 min) - Why we'll dominate
-8. **Go-to-Market** (1 min) - 3-phase expansion strategy
-9. **Investment Ask** (1 min) - $2.5M seed funding request
-10. **Vision** (0.5 min) - Future of smart cities
+1. **The Hook** (1 min) - Fleet operational challenges and opportunity
+2. **Business Problem** (1 min) - Current operational costs and inefficiencies  
+3. **Our Solution** (1.5 min) - FleetSense platform overview for truck operations
+4. **Live Demo** (2 min) - Interactive application demonstration showing fleet use cases
+5. **Business Impact** (1 min) - ROI analysis and operational benefits
+6. **Implementation Strategy** (1 min) - Phased deployment approach
+7. **Technical Advantages** (1 min) - Why this technology works for our operations
+8. **Authority Engagement** (1 min) - Strategic infrastructure advocacy approach
+9. **Project Investment** (1 min) - Resource requirements and expected returns
+10. **Vision & Next Steps** (0.5 min) - Future operational excellence
 
 ### 💼 Key Business Value Propositions
-- **"Waze for Cyclists"** - Crowdsourced road quality intelligence  
-- **City Infrastructure Planning** - Data-driven maintenance decisions
-- **Insurance Risk Assessment** - Accurate cycling hazard analysis
-- **Navigation Enhancement** - Route optimization for cyclists
-- **Predictive Maintenance** - Proactive vs. reactive road repairs
+- **"Intelligent Route Intelligence"** - Data-driven operational decision making  
+- **Cost Reduction** - 20-30% savings in vehicle maintenance and operational delays
+- **Authority Engagement** - Evidence-based infrastructure improvement advocacy
+- **Fleet Optimization** - Route planning based on real condition data
+- **Strategic Positioning** - Industry leadership in operational intelligence
 
 ## 🚀 Running the Application
 
@@ -77,36 +77,41 @@ The application is deployed and accessible at: [GitHub Pages URL]
 
 ## 📱 How It Works
 
-### For Cyclists:
-1. **Open the app** on smartphone while cycling
-2. **Grant permissions** for location, motion sensors, and camera
-3. **Start a ride** - app begins automatic data collection
-4. **Ride normally** - sensors detect road roughness in real-time
-5. **View live data** - color-coded route quality on map
-6. **Access insights** - historical data and route recommendations
+### For Fleet Operations:
+1. **Install the app** on company smartphones in fleet vehicles
+2. **Grant permissions** for location, motion sensors, and camera access
+3. **Start a trip** - app begins automatic data collection during route to drill sites
+4. **Drive normally** - sensors detect road roughness and conditions in real-time
+5. **View live intelligence** - color-coded route quality data for operational decisions
+6. **Access insights** - historical data and route optimization recommendations
+7. **Generate reports** - Evidence for authority engagement and operational analysis
 
-### For Cities:
-1. **Access aggregated data** through enterprise dashboard
-2. **Identify problem areas** using crowdsourced roughness maps
-3. **Prioritize maintenance** based on actual usage and conditions
-4. **Track improvements** through before/after analysis
-5. **Plan infrastructure** using data-driven insights
+### For Management:
+1. **Access operational dashboard** with fleet-wide route intelligence
+2. **Identify problem routes** using comprehensive roughness and cost data
+3. **Optimize route planning** based on actual road conditions and operational costs
+4. **Plan maintenance** through predictive analysis based on route exposure
+5. **Engage authorities** using evidence-based data for infrastructure improvements
 
 ## 🏢 Business Model
 
-### Revenue Streams:
-- **Data Licensing**: $10K-$100K per city per quarter
-- **SaaS Platform**: $50-$500 per month per organization  
-- **API Access**: $0.01-$0.10 per API call
-- **Premium Features**: $9.99 per month for consumers
+### Internal Value Creation:
+- **Operational Efficiency**: 20-30% reduction in vehicle maintenance costs
+- **Route Optimization**: Data-driven route planning reducing delays and fuel costs  
+- **Risk Management**: Proactive hazard identification and safety improvement
+- **Strategic Advocacy**: Evidence-based infrastructure improvement requests
 
-### Target Markets:
-- City governments and transportation departments
-- Bike-sharing and micro-mobility companies
-- Navigation and mapping applications  
-- Insurance companies and risk assessment
-- Urban planning consultants
-- Construction and maintenance contractors
+### Implementation Costs:
+- **Initial Setup**: $25,000 for full fleet integration
+- **Annual Operating**: $5,000 for system maintenance and improvements
+- **Expected Savings**: $75,000 annually in operational improvements
+
+### Target Benefits:
+- Fleet operations and dispatch planning
+- Vehicle maintenance and cost management
+- Driver safety and operational efficiency
+- Authority engagement and infrastructure advocacy
+- Strategic route planning and optimization
 
 ## 🔧 Technical Architecture
 
@@ -130,39 +135,29 @@ const roughness = calculateVariance(accelerometerBuffer);
 - Color-coded map overlays (green = smooth, red = rough)
 - Interactive historical data from previous rides
 
-## 📈 Market Opportunity
+## 📈 Operational Impact
 
-### Total Addressable Market: $350 Billion
-- Smart City Infrastructure: $2.3T global market
-- Urban Mobility Solutions: $350B by 2030
-- Cycling & Micro-mobility: $47B growing at 12% annually
+### Quantified Business Benefits: $75,000 Annual Savings
+- Vehicle maintenance cost reduction: $35,000 (20-30% improvement)
+- Operational efficiency improvements: $25,000 (reduced delays, fuel optimization)
+- Risk management and safety: $15,000 (decreased vehicle damage, safety incidents)
 
-### Competitive Advantages:
-- First-mover advantage in bike roughness mapping
-- Offline-first technology for reliable data collection
-- Comprehensive multi-modal data capture
-- Network effects creating data moat
-- Zero additional hardware requirements
+### Strategic Advantages:
+- **Data-Driven Operations**: Route planning based on real condition intelligence
+- **Predictive Maintenance**: Vehicle maintenance scheduling informed by route analysis
+- **Authority Partnerships**: Evidence-based infrastructure advocacy positioning
+- **Operational Excellence**: Industry leadership in intelligent fleet management
+- **Cost Control**: Systematic approach to operational cost reduction
 
-## 🤝 Contributing
+## 🤝 Project Development
 
-This project is currently in MVP stage. For business inquiries and partnership opportunities:
+This project is currently in implementation planning stage for internal company deployment. For project inquiries and technical support:
 
-- **Email**: hello@roadsense.app
-- **Business Development**: [Contact information]
-- **Technical Inquiries**: [Developer contact]
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🙏 Acknowledgments
-
-- OpenStreetMap for mapping data
-- Leaflet.js for mapping functionality  
-- Chart.js for data visualization
-- Web API standards for device sensor access
+- **Project Manager**: [Name], [Title]
+- **Technical Lead**: [Name], [Title]
+- **Operations Contact**: [Name], [Title]
+- **Email**: [internal-contact@company.com]
 
 ---
 
-**RoadSense**: Building the nervous system for smarter cities, one bike ride at a time.
+**FleetSense**: Building intelligent operational excellence, one truck trip at a time.
