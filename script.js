@@ -43,9 +43,9 @@ let compositorCanvas, compositorCtx, compositorRAF = 0; // hidden canvas for rec
 let offMapDiv = null, offMap = null, offRenderer = null;
 let offRidePath = null, offHistoricalLayer = null, offCurrentMarker = null, offTileLayer = null;
 
-// Tile source for offscreen map (must allow CORS)
+// Tile source for offscreen map (must allow CORS for drawImage)
 const TILES_URL = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
-// If your network blocks OSM CORS, use MapTiler raster tiles (requires key):
+// If needed: MapTiler raster with key (CORS OK):
 // const TILES_URL = 'https://api.maptiler.com/maps/streets/{z}/{x}/{y}.png?key=YOUR_KEY';
 
 // Capability detection
@@ -216,11 +216,11 @@ function handleMotion(evt) {
 async function processCombinedDataPoint() {
   if (!currentRideId || !latestGpsPosition) { statusDiv && (statusDiv.textContent = 'Waiting for GPS…'); return; }
   const { latitude, longitude, altitude, accuracy } = latestGpsPosition.coords;
-  const timestamp = latestGpsPosition.timestamp;
+  theTimestamp = latestGpsPosition.timestamp;
   const roughness = calculateVariance(accelerometerBuffer);
   accelerometerBuffer = [];
 
-  const dp = { id: crypto.randomUUID(), rideId: currentRideId, timestamp, latitude, longitude, altitude, accuracy, roughnessValue: roughness };
+  const dp = { id: crypto.randomUUID(), rideId: currentRideId, timestamp: theTimestamp, latitude, longitude, altitude, accuracy, roughnessValue: roughness };
 
   currentRideDataPoints.push(dp);
   dataPointsCounter && (dataPointsCounter.textContent = `Data Points: ${currentRideDataPoints.length}`);
@@ -228,7 +228,7 @@ async function processCombinedDataPoint() {
   updateMapDisplay(dp);
   updateOffscreenMapDisplay(dp); // keep the offscreen Leaflet in sync
 
-  if (vibrationChart) { chartDataset.push({ x: new Date(timestamp), y: roughness, meta: dp }); vibrationChart.update(); }
+  if (vibrationChart) { chartDataset.push({ x: new Date(theTimestamp), y: roughness, meta: dp }); vibrationChart.update(); }
 
   statusDiv && (statusDiv.textContent = `Lat ${latitude.toFixed(4)}, Lon ${longitude.toFixed(4)}, Rough ${roughness.toFixed(2)}`);
 }
@@ -261,7 +261,7 @@ function updateMapDisplay(dp) {
 }
 
 // =======================
-// ANDROID FALLBACK: Offscreen Leaflet (tiles + vectors) → hidden compositor
+// ANDROID FALLBACK: Offscreen Leaflet (tiles + vectors) → hidden compositor (+ graph)
 // =======================
 
 function ensureOffscreenLeaflet() {
@@ -279,11 +279,8 @@ function ensureOffscreenLeaflet() {
   offMap = L.map(offMapDiv, { zoomControl: false, attributionControl: false, preferCanvas: true })
            .setView([51.0447, -114.0719], 13);
 
-  // **Tiles with CORS** so we can draw them to canvas
-  offTileLayer = L.tileLayer(TILES_URL, {
-    crossOrigin: true, // IMPORTANT: allows drawImage without tainting
-    tileSize: 256
-  }).addTo(offMap);
+  // Tiles with CORS so we can draw them to the recording canvas
+  offTileLayer = L.tileLayer(TILES_URL, { crossOrigin: true, tileSize: 256 }).addTo(offMap);
 
   // Vector overlays
   offHistoricalLayer = L.layerGroup(undefined, { renderer: offRenderer }).addTo(offMap);
@@ -304,8 +301,7 @@ async function populateOffscreenHistorical() {
   allPoints.forEach(pt => {
     L.circleMarker([pt.latitude, pt.longitude], {
       radius: 4, fillColor: roughnessToColor(pt.roughnessValue),
-      color: '#000', weight: 1, opacity: 0.7, fillOpacity: 0.7,
-      renderer: offRenderer
+      color: '#000', weight: 1, opacity: 0.7, fillOpacity: 0.7, renderer: offRenderer
     }).addTo(offHistoricalLayer);
   });
   await tx.complete;
@@ -335,16 +331,14 @@ function ensureCompositorCanvas() {
   compositorCtx = compositorCanvas.getContext('2d');
 }
 
-// Helper: draw offscreen tile images onto our compositor
+// Helper: draw offscreen tile images onto our compositor (raster)
 function drawOffscreenTiles(ctx, W, H) {
   if (!offTileLayer || !offMapDiv) return;
   const mapRect = offMapDiv.getBoundingClientRect();
   const sx = W / mapRect.width;
   const sy = H / mapRect.height;
-  // All tile <img> nodes under the offscreen tile pane
   const imgs = offMapDiv.querySelectorAll('.leaflet-tile-pane img.leaflet-tile');
   imgs.forEach(img => {
-    // Only draw tiles that finished loading and are visible
     if (!img.complete || img.naturalWidth === 0 || img.style.display === 'none') return;
     const r = img.getBoundingClientRect();
     const x = (r.left - mapRect.left) * sx;
@@ -353,6 +347,41 @@ function drawOffscreenTiles(ctx, W, H) {
     const h = r.height * sy;
     try { ctx.drawImage(img, x, y, w, h); } catch {}
   });
+}
+
+// Helper: draw the live Chart.js roughness canvas into compositor
+function drawLiveGraph(ctx, W, H) {
+  const chartCanvas = vibrationChart?.canvas;
+  if (!chartCanvas) return;
+
+  // Target size/pos (top-right card)
+  const pad = 24;
+  const gw = Math.floor(W * 0.40);     // width ~40% of frame
+  const gh = Math.floor(H * 0.24);     // height ~24% of frame
+  const gx = W - gw - pad;             // top-right
+  const gy = pad;
+
+  // Card background (rounded rect with slight shadow)
+  ctx.save();
+  const r = 16;
+  ctx.fillStyle = 'rgba(255,255,255,0.90)';
+  ctx.strokeStyle = 'rgba(0,0,0,0.10)';
+  ctx.lineWidth = 1;
+
+  ctx.beginPath();
+  ctx.moveTo(gx + r, gy);
+  ctx.arcTo(gx + gw, gy, gx + gw, gy + gh, r);
+  ctx.arcTo(gx + gw, gy + gh, gx, gy + gh, r);
+  ctx.arcTo(gx, gy + gh, gx, gy, r);
+  ctx.arcTo(gx, gy, gx + gw, gy, r);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  // Clip and draw the chart into the card
+  ctx.clip();
+  try { ctx.drawImage(chartCanvas, gx, gy, gw, gh); } catch {}
+  ctx.restore();
 }
 
 // =======================
@@ -372,7 +401,7 @@ function pickBestMime() {
 }
 function stopTracks(stream) { try { stream?.getTracks().forEach(t => t.stop()); } catch {} }
 function setRecordingUI(active) {
-  // Visible map always stays on screen.
+  // Visible map stays on screen. Show PIP viewfinder while recording.
   viewfinderContainer?.classList.toggle('hidden', !active);
   document.body.classList.toggle('with-viewfinder', active);
   recIndicator?.classList.toggle('hidden', !active);
@@ -403,7 +432,7 @@ async function startDesktopRecording() {
   statusDiv && (statusDiv.textContent = 'Recording screen + mic. Viewfinder active.');
 }
 
-// Android: hidden compositor (tiles + vectors) + mic + PIP
+// Android: hidden compositor (tiles + vectors + live graph) + mic + PIP
 async function startAndroidCompositorRecording() {
   ensureOffscreenLeaflet();
   ensureCompositorCanvas();
@@ -424,19 +453,18 @@ async function startAndroidCompositorRecording() {
   vid.srcObject = cameraStream; vid.muted = true; vid.playsInline = true;
   try { await vid.play(); } catch {}
 
-  // Draw loop: tiles → vector canvas → PIP → HUD
+  // Draw loop: TILES → VECTOR → LIVE GRAPH → PIP → HUD
   const draw = () => {
     const cvs = compositorCanvas, ctx = compositorCtx;
     const W = cvs.width, H = cvs.height;
     ctx.clearRect(0,0,W,H);
 
-    // 1) Tiles (raster) from offscreen map
+    // 1) Tiles (raster)
     drawOffscreenTiles(ctx, W, H);
 
-    // 2) Vector overlays: draw Leaflet canvas renderer atop tiles
+    // 2) Vector overlays
     const offCanvas = offRenderer && offRenderer._container ? offRenderer._container : null;
     if (offCanvas) {
-      // scale vector canvas to full frame
       const mapRect = offMapDiv.getBoundingClientRect();
       const sx = W / mapRect.width;
       const sy = H / mapRect.height;
@@ -448,7 +476,10 @@ async function startAndroidCompositorRecording() {
       try { ctx.drawImage(offCanvas, x, y, w, h); } catch {}
     }
 
-    // 3) PIP (camera) bottom-right
+    // 3) Live roughness graph (from the on-page Chart.js canvas)
+    drawLiveGraph(ctx, W, H);
+
+    // 4) PIP (camera) bottom-right
     const pipW = Math.floor(W * 0.38);
     const pipH = Math.floor(pipW * 9/16);
     const pad = 24;
@@ -465,7 +496,7 @@ async function startAndroidCompositorRecording() {
     try { ctx.drawImage(vid, x, y, pipW, pipH); } catch {}
     ctx.restore();
 
-    // 4) HUD REC dot
+    // 5) HUD REC dot
     ctx.fillStyle = '#e10600';
     ctx.beginPath();
     ctx.arc(20, 20, 8, 0, Math.PI*2);
@@ -487,7 +518,7 @@ async function startAndroidCompositorRecording() {
   }
 
   setRecordingUI(true);
-  statusDiv && (statusDiv.textContent = 'Recording: tiles + overlays + camera + mic (live map stays visible).');
+  statusDiv && (statusDiv.textContent = 'Recording: tiles + overlays + graph + camera + mic (live map stays visible).');
 }
 
 async function startMediaRecorder(stream) {
