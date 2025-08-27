@@ -80,25 +80,43 @@ This repository includes comprehensive business presentation materials for pitch
 
 ## 🚀 Running the Application
 
-### Local Development
+### 🌐 Live Demo
+**Access the app anywhere:** [https://roadrage-offline.onrender.com](https://roadrage-offline.onrender.com)
+
+The application is deployed on Render.com and accessible from any device with internet connection.
+
+### 📱 Quick Start (Cloud)
+1. Visit the live demo URL above
+2. Grant location and motion sensor permissions
+3. Start tracking road conditions immediately
+4. Access route planner and historical data
+
+### 🛠️ Local Development
 ```bash
 # Clone the repository
-git clone https://github.com/RupinDalvi/roadrage_offline.git
+git clone https://github.com/dwangdata/roadrage_offline.git
 cd roadrage_offline
 
-# Start local web server
-python3 -m http.server 8080
+# Install dependencies
+npm install
+
+# Start backend server
+npm start        # Server runs on localhost:3000
 
 # Access application
-open http://localhost:8080
+open http://localhost:3000
 ```
 
-### Live Demo
-The application is deployed and accessible at: [GitHub Pages URL]
+### 🚀 Deploy Your Own Instance
+See [DEPLOYMENT.md](DEPLOYMENT.md) for comprehensive deployment guide to:
+- Render.com (recommended, free tier)
+- Railway
+- Heroku
+- Self-hosted VPS
 
 ### Browser Requirements
 - Modern web browser with ES6+ support
-- HTTPS required for device sensor access
+- HTTPS required for device sensor access (automatically handled in cloud deployment)
 - Geolocation and camera permissions needed
 - Works on mobile and desktop platforms
 
