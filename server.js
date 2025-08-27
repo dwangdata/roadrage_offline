@@ -10,22 +10,51 @@ const PORT = process.env.PORT || 3000;
 // Environment configuration
 const isProduction = process.env.NODE_ENV === 'production';
 
+// In-memory session store for active rides (in production, use Redis or similar)
+const activeSessions = new Map(); // sessionId -> { rideId, startTime, lastActivity }
+
 // Middleware
 app.use(cors());
 app.use(bodyParser.json({ limit: '10mb' }));
 app.use(bodyParser.urlencoded({ extended: true, limit: '10mb' }));
 
+// Simple session middleware
+app.use((req, res, next) => {
+  const sessionId = req.headers['x-session-id'] || req.query.sessionId || `session_${Date.now()}_${Math.random()}`;
+  req.sessionId = sessionId;
+  res.setHeader('X-Session-ID', sessionId);
+  next();
+});
+
 // Serve static files (frontend)
 app.use(express.static(path.join(__dirname)));
 
-// Database setup
-const dbPath = isProduction 
-  ? path.join(process.cwd(), 'roadrage.db')  // Use current working directory in production
-  : path.join(__dirname, 'roadrage.db');
+// Database setup - Ensure writable location for all environments
+let dbPath;
+if (isProduction) {
+  // Try multiple possible locations for database persistence on cloud platforms
+  const possiblePaths = [
+    path.join(process.cwd(), 'roadrage.db'),     // Current working directory
+    path.join(__dirname, 'roadrage.db'),         // Application directory
+    path.join('/tmp', 'roadrage.db')             // Temporary directory (fallback)
+  ];
+  
+  // Use the first writable location
+  dbPath = possiblePaths[0]; // Default to current working directory
+  
+  // On Render, the current working directory should be persistent
+  if (process.env.RENDER) {
+    dbPath = path.join(process.cwd(), 'roadrage.db');
+  }
+} else {
+  dbPath = path.join(__dirname, 'roadrage.db');
+}
   
 console.log(`Database path: ${dbPath}`);
 console.log(`Current working directory: ${process.cwd()}`);
 console.log(`__dirname: ${__dirname}`);
+console.log(`Environment: ${process.env.NODE_ENV}`);
+console.log(`Platform: ${process.env.RENDER ? 'Render.com' : 'Other'}`);
 
 const db = new sqlite3.Database(dbPath, (err) => {
   if (err) {
@@ -127,6 +156,31 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
 }
 
 // API Routes
+
+// Session management endpoints
+app.get('/api/session/status', (req, res) => {
+  const session = activeSessions.get(req.sessionId);
+  res.json({
+    sessionId: req.sessionId,
+    hasActiveRide: !!session,
+    activeRide: session || null
+  });
+});
+
+app.post('/api/session/ride/start', (req, res) => {
+  const { rideId, startTime } = req.body;
+  activeSessions.set(req.sessionId, {
+    rideId,
+    startTime,
+    lastActivity: Date.now()
+  });
+  res.json({ message: 'Active ride session started', sessionId: req.sessionId });
+});
+
+app.post('/api/session/ride/stop', (req, res) => {
+  activeSessions.delete(req.sessionId);
+  res.json({ message: 'Active ride session ended', sessionId: req.sessionId });
+});
 
 // Get all rides
 app.get('/api/rides', (req, res) => {
