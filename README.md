@@ -1,5 +1,32 @@
 # FleetSense: Intelligent Road Quality Monitoring for Fleet Operations
 
+## 🆕 New Backend & Route Planning Features
+
+### Quick Start (Backend)
+```bash
+npm install      # Install dependencies
+npm start        # Start server on localhost:3000
+```
+
+### New Pages
+- **Live Tracking:** http://localhost:3000 (original app)
+- **Route Planner:** http://localhost:3000/route-planner (new feature)
+
+### New Features
+- ✅ **Node.js Backend** with Express + SQLite database
+- ✅ **Route Optimization** algorithm based on road roughness data
+- ✅ **Interactive Route Planner** with map-based point selection
+- ✅ **RESTful APIs** for ride data and route optimization
+- ✅ **Dual Storage** (local IndexedDB + server database)
+
+### API Endpoints
+- `POST /api/route-optimization` - Find optimal routes
+- `GET /api/roughness-map` - Get road roughness data
+- `POST /api/rides` - Create/manage rides
+- Full API documentation in test-api.js
+
+---
+
 ## Project Overview
 
 FleetSense is an intelligent road quality monitoring system that transforms company smartphones into smart sensors for optimizing fleet operations. Using device accelerometer data combined with GPS tracking, it creates comprehensive intelligence about road conditions on routes critical to drilling operations and enables data-driven operational decisions.
