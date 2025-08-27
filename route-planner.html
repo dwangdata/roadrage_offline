@@ -316,6 +316,20 @@
 </head>
 <body>
   <div class="route-planner-container">
+    <!-- Navigation Warning Modal -->
+    <div id="navigationWarning" class="warning-modal hidden">
+      <div class="warning-content">
+        <div class="warning-header">
+          <h3>⚠️ Active Trip in Progress</h3>
+        </div>
+        <p id="warningMessage">You have an active trip recording. Please stop the current trip before navigating to another page.</p>
+        <div class="warning-actions">
+          <button id="warningStayButton" class="btn-sm btn-primary">Stay on this page</button>
+          <button id="warningNavigateButton" class="btn-sm btn-secondary">Navigate anyway</button>
+        </div>
+      </div>
+    </div>
+
     <div class="nav-links">
       <a href="/">📍 Live Tracking</a>
       <a href="/route-planner" class="active">🗺️ Route Planner</a>
@@ -454,6 +468,7 @@
 
   <!-- Libraries -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="navigation.js"></script>
   
   <script>
     // Route planner state
@@ -1192,7 +1207,55 @@
       [startLatInput, startLonInput, endLatInput, endLonInput].forEach(input => {
         input.addEventListener('change', updateMarkersFromInputs);
       });
+
+      // Setup navigation warning handler
+      setupNavigationWarning();
     });
+
+    // Navigation warning system
+    function setupNavigationWarning() {
+      const warningModal = document.getElementById('navigationWarning');
+      const warningMessage = document.getElementById('warningMessage');
+      const stayButton = document.getElementById('warningStayButton');
+      const navigateButton = document.getElementById('warningNavigateButton');
+      
+      let pendingNavigation = null;
+
+      // Set up the navigation warning handler
+      if (window.navigationManager) {
+        window.navigationManager.setWarningHandler((message, href) => {
+          warningMessage.textContent = message;
+          pendingNavigation = href;
+          warningModal.classList.remove('hidden');
+        });
+      }
+
+      // Stay button - close modal and stay on current page
+      stayButton.addEventListener('click', () => {
+        warningModal.classList.add('hidden');
+        pendingNavigation = null;
+      });
+
+      // Navigate button - proceed with navigation (warn about data loss)
+      navigateButton.addEventListener('click', () => {
+        if (pendingNavigation) {
+          warningModal.classList.add('hidden');
+          // Force navigation by temporarily removing the active ride
+          if (window.navigationManager) {
+            window.navigationManager.hasActiveRide = false;
+          }
+          window.location.href = pendingNavigation;
+        }
+      });
+
+      // Close modal when clicking outside
+      warningModal.addEventListener('click', (event) => {
+        if (event.target === warningModal) {
+          warningModal.classList.add('hidden');
+          pendingNavigation = null;
+        }
+      });
+    }
   </script>
 </body>
 </html>

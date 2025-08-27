@@ -4,6 +4,9 @@ let currentRideDataPoints = [], accelerometerBuffer = [];
 let latestGpsPosition = null, watchId = null, motionListenerActive = false;
 let dataCollectionInterval = null, lastLowPassZ = 0;
 
+// Expose currentRideId globally for navigation manager
+window.currentRideId = null;
+
 // Backend integration settings
 const USE_BACKEND = true; // Set to false to use IndexedDB only
 const BACKEND_URL = window.location.origin;
@@ -664,6 +667,7 @@ function saveRecording() {
 async function startRide() {
   if (currentRideId) return;
   currentRideId = Date.now();
+  window.currentRideId = currentRideId; // Update global reference
   currentRideDataPoints = [];
   accelerometerBuffer = [];
   latestGpsPosition = null;
@@ -704,6 +708,11 @@ async function startRide() {
       rideId: currentRideId,
       startTime: currentRideId
     });
+  }
+
+  // Notify navigation manager about active ride
+  if (window.navigationManager) {
+    await window.navigationManager.setActiveRide(currentRideId, currentRideId);
   }
 
   if (vibrationChart) { chartDataset.length = 0; vibrationChart.data.datasets[0].data = chartDataset; vibrationChart.update(); }
@@ -751,7 +760,13 @@ async function stopRide() {
     statusDiv && (statusDiv.textContent = 'Error saving ride.'); 
   }
 
+  // Clear navigation manager active ride status
+  if (window.navigationManager) {
+    await window.navigationManager.clearActiveRide();
+  }
+
   currentRideId = null;
+  window.currentRideId = null; // Clear global reference
   currentRideDataPoints = [];
   accelerometerBuffer = [];
   latestGpsPosition = null;
@@ -959,9 +974,61 @@ document.addEventListener('DOMContentLoaded', () => {
   closeDetailButton && closeDetailButton.addEventListener('click', hideRideDetails);
   bellButton && bellButton.addEventListener('click', window.playBell);
 
+  // Setup navigation warning
+  setupNavigationWarning();
+
   // Toggle recording
   viewfinderToggleButton && viewfinderToggleButton.addEventListener('click', async () => {
     if (viewfinderActive) stopViewfinderAndRecording();
     else await startViewfinderAndRecording();
   });
 });
+
+// Navigation warning system
+function setupNavigationWarning() {
+  const warningModal = document.getElementById('navigationWarning');
+  const warningMessage = document.getElementById('warningMessage');
+  const stayButton = document.getElementById('warningStayButton');
+  const stopButton = document.getElementById('warningStopButton');
+  
+  // Early return if elements don't exist (for pages without warning modal)
+  if (!warningModal || !warningMessage || !stayButton) return;
+  
+  let pendingNavigation = null;
+
+  // Set up the navigation warning handler
+  if (window.navigationManager) {
+    window.navigationManager.setWarningHandler((message, href) => {
+      warningMessage.textContent = message;
+      pendingNavigation = href;
+      warningModal.classList.remove('hidden');
+    });
+  }
+
+  // Stay button - close modal and stay on current page
+  stayButton.addEventListener('click', () => {
+    warningModal.classList.add('hidden');
+    pendingNavigation = null;
+  });
+
+  // Stop button - stop current ride and navigate
+  if (stopButton) {
+    stopButton.addEventListener('click', async () => {
+      warningModal.classList.add('hidden');
+      if (currentRideId) {
+        await stopRide(); // Stop the current ride
+      }
+      if (pendingNavigation) {
+        window.location.href = pendingNavigation;
+      }
+    });
+  }
+
+  // Close modal when clicking outside
+  warningModal.addEventListener('click', (event) => {
+    if (event.target === warningModal) {
+      warningModal.classList.add('hidden');
+      pendingNavigation = null;
+    }
+  });
+}
