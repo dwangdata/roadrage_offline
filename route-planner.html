@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+  />
+  <title>FleetSense - Route Planner</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet"/>
+  
+  <!-- Leaflet -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  
+  <link rel="stylesheet" href="style.css"/>
+  <style>
+    .route-planner-container {
+      max-width: 1200px;
+      margin: 20px auto;
+      padding: 20px;
+    }
+    
+    .planner-controls {
+      background: #fff;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      margin-bottom: 20px;
+    }
+    
+    .input-group {
+      display: flex;
+      gap: 15px;
+      margin-bottom: 15px;
+      flex-wrap: wrap;
+    }
+    
+    .input-field {
+      flex: 1;
+      min-width: 200px;
+    }
+    
+    .input-field label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+      color: #2c3e50;
+    }
+    
+    .input-field input {
+      width: 100%;
+      padding: 10px;
+      border: 2px solid #e0f2f7;
+      border-radius: 8px;
+      font-size: 14px;
+    }
+    
+    .input-field input:focus {
+      outline: none;
+      border-color: #007bff;
+    }
+    
+    .route-options {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 15px;
+      flex-wrap: wrap;
+    }
+    
+    .route-option {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    
+    .route-option input[type="radio"] {
+      margin: 0;
+    }
+    
+    #routePlannerMap {
+      height: 500px;
+      width: 100%;
+      margin: 20px 0;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    
+    .route-results {
+      background: #fff;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      margin-top: 20px;
+    }
+    
+    .route-card {
+      border: 2px solid #e0f2f7;
+      border-radius: 8px;
+      padding: 15px;
+      margin-bottom: 15px;
+      transition: border-color 0.3s;
+    }
+    
+    .route-card:hover {
+      border-color: #007bff;
+    }
+    
+    .route-card.selected {
+      border-color: #007bff;
+      background-color: #f8f9fa;
+    }
+    
+    .route-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    
+    .route-type {
+      font-weight: bold;
+      color: #007bff;
+    }
+    
+    .route-metrics {
+      display: flex;
+      gap: 20px;
+      font-size: 14px;
+      color: #666;
+    }
+    
+    .metric {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    
+    .metric-value {
+      font-weight: bold;
+      font-size: 16px;
+      color: #2c3e50;
+    }
+    
+    .metric-label {
+      font-size: 12px;
+      text-transform: uppercase;
+    }
+    
+    .roughness-low { color: #28a745; }
+    .roughness-medium { color: #ffc107; }
+    .roughness-high { color: #dc3545; }
+    
+    .nav-links {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    
+    .nav-links a {
+      color: #007bff;
+      text-decoration: none;
+      margin: 0 15px;
+      padding: 8px 16px;
+      border-radius: 4px;
+      transition: background-color 0.3s;
+    }
+    
+    .nav-links a:hover {
+      background-color: #e9ecef;
+    }
+    
+    .nav-links a.active {
+      background-color: #007bff;
+      color: white;
+    }
+    
+    .loading {
+      text-align: center;
+      padding: 20px;
+      color: #666;
+    }
+    
+    .error {
+      background-color: #f8d7da;
+      color: #721c24;
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 15px;
+    }
+    
+    .click-instruction {
+      background: #e3f2fd;
+      padding: 10px;
+      border-radius: 8px;
+      margin-bottom: 15px;
+      font-size: 14px;
+      color: #1565c0;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="route-planner-container">
+    <div class="nav-links">
+      <a href="/">📍 Live Tracking</a>
+      <a href="/route-planner" class="active">🗺️ Route Planner</a>
+    </div>
+    
+    <h1>FleetSense - Route Planner</h1>
+    
+    <div class="planner-controls">
+      <div class="click-instruction">
+        Click on the map to set start (green) and end (red) points, or enter coordinates manually
+      </div>
+      
+      <div class="input-group">
+        <div class="input-field">
+          <label for="startLat">Start Latitude:</label>
+          <input type="number" id="startLat" step="any" placeholder="e.g., 51.0447">
+        </div>
+        <div class="input-field">
+          <label for="startLon">Start Longitude:</label>
+          <input type="number" id="startLon" step="any" placeholder="e.g., -114.0719">
+        </div>
+      </div>
+      
+      <div class="input-group">
+        <div class="input-field">
+          <label for="endLat">End Latitude:</label>
+          <input type="number" id="endLat" step="any" placeholder="e.g., 51.0500">
+        </div>
+        <div class="input-field">
+          <label for="endLon">End Longitude:</label>
+          <input type="number" id="endLon" step="any" placeholder="e.g., -114.0600">
+        </div>
+      </div>
+      
+      <div class="route-options">
+        <div class="route-option">
+          <input type="radio" id="optimizeSmooth" name="optimization" value="smooth" checked>
+          <label for="optimizeSmooth">Prefer Smooth Roads</label>
+        </div>
+        <div class="route-option">
+          <input type="radio" id="optimizeRough" name="optimization" value="rough">
+          <label for="optimizeRough">Prefer Rough Roads</label>
+        </div>
+      </div>
+      
+      <div class="controls">
+        <button id="findRoutesButton" class="btn-sm">Find Optimal Routes</button>
+        <button id="clearPointsButton" class="btn-sm">Clear Points</button>
+        <button id="useCurrentLocationButton" class="btn-sm">Use Current Location as Start</button>
+      </div>
+    </div>
+    
+    <div id="routePlannerMap"></div>
+    
+    <div id="routeResults" class="route-results" style="display: none;">
+      <h3>Route Options</h3>
+      <div id="routesList"></div>
+    </div>
+    
+    <div id="loadingIndicator" class="loading" style="display: none;">
+      🔍 Finding optimal routes...
+    </div>
+    
+    <div id="errorMessage" class="error" style="display: none;"></div>
+  </div>
+
+  <!-- Libraries -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  
+  <script>
+    // Route planner state
+    let plannerMap, startMarker, endMarker, routeLayers = [];
+    let roughnessLayer, currentRoutes = [];
+    let clickMode = 'start'; // 'start' or 'end'
+    
+    // DOM elements
+    const startLatInput = document.getElementById('startLat');
+    const startLonInput = document.getElementById('startLon');
+    const endLatInput = document.getElementById('endLat');
+    const endLonInput = document.getElementById('endLon');
+    const findRoutesButton = document.getElementById('findRoutesButton');
+    const clearPointsButton = document.getElementById('clearPointsButton');
+    const useCurrentLocationButton = document.getElementById('useCurrentLocationButton');
+    const routeResults = document.getElementById('routeResults');
+    const routesList = document.getElementById('routesList');
+    const loadingIndicator = document.getElementById('loadingIndicator');
+    const errorMessage = document.getElementById('errorMessage');
+    
+    // Initialize map
+    function initializePlannerMap() {
+      plannerMap = L.map('routePlannerMap').setView([51.0447, -114.0719], 13);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors'
+      }).addTo(plannerMap);
+      
+      // Create layer for roughness data
+      roughnessLayer = L.layerGroup().addTo(plannerMap);
+      
+      // Map click handler
+      plannerMap.on('click', function(e) {
+        const lat = e.latlng.lat;
+        const lon = e.latlng.lng;
+        
+        if (clickMode === 'start' || (!startMarker && !endMarker)) {
+          setStartPoint(lat, lon);
+          clickMode = 'end';
+        } else {
+          setEndPoint(lat, lon);
+          clickMode = 'start';
+        }
+      });
+      
+      // Load and display roughness data
+      loadRoughnessData();
+      
+      setTimeout(() => plannerMap.invalidateSize(), 200);
+    }
+    
+    // Load roughness data from API
+    async function loadRoughnessData() {
+      try {
+        const response = await fetch('/api/roughness-map');
+        const roughnessData = await response.json();
+        
+        roughnessLayer.clearLayers();
+        
+        roughnessData.forEach(point => {
+          const color = getRoughnessColor(point.avgRoughness);
+          L.circleMarker([point.latitude, point.longitude], {
+            radius: 4,
+            fillColor: color,
+            color: '#000',
+            weight: 1,
+            opacity: 0.7,
+            fillOpacity: 0.7
+          })
+          .bindPopup(`
+            <strong>Road Roughness</strong><br>
+            Average: ${point.avgRoughness.toFixed(2)}<br>
+            Data Points: ${point.dataPointCount}<br>
+            Last Updated: ${new Date(point.lastUpdated).toLocaleDateString()}
+          `)
+          .addTo(roughnessLayer);
+        });
+        
+        console.log(`Loaded ${roughnessData.length} roughness data points`);
+      } catch (error) {
+        console.error('Error loading roughness data:', error);
+      }
+    }
+    
+    // Get color based on roughness value
+    function getRoughnessColor(roughness) {
+      if (roughness <= 3) return '#00ff00';      // Green - smooth
+      if (roughness <= 6) return '#7fff00';      // Light green
+      if (roughness <= 9) return '#ffff00';      // Yellow
+      if (roughness <= 15) return '#ff7f00';     // Orange
+      if (roughness <= 21) return '#ff0000';     // Red
+      return '#8b0000';                          // Dark red - very rough
+    }
+    
+    // Set start point
+    function setStartPoint(lat, lon) {
+      if (startMarker) {
+        plannerMap.removeLayer(startMarker);
+      }
+      
+      startMarker = L.marker([lat, lon], {
+        icon: L.icon({
+          iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
+          shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+          iconSize: [25, 41],
+          iconAnchor: [12, 41],
+          popupAnchor: [1, -34],
+          shadowSize: [41, 41]
+        })
+      }).addTo(plannerMap);
+      
+      startMarker.bindPopup('Start Point').openPopup();
+      
+      startLatInput.value = lat.toFixed(6);
+      startLonInput.value = lon.toFixed(6);
+      
+      clearRoutes();
+    }
+    
+    // Set end point
+    function setEndPoint(lat, lon) {
+      if (endMarker) {
+        plannerMap.removeLayer(endMarker);
+      }
+      
+      endMarker = L.marker([lat, lon], {
+        icon: L.icon({
+          iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+          shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+          iconSize: [25, 41],
+          iconAnchor: [12, 41],
+          popupAnchor: [1, -34],
+          shadowSize: [41, 41]
+        })
+      }).addTo(plannerMap);
+      
+      endMarker.bindPopup('End Point').openPopup();
+      
+      endLatInput.value = lat.toFixed(6);
+      endLonInput.value = lon.toFixed(6);
+      
+      clearRoutes();
+    }
+    
+    // Clear all route displays
+    function clearRoutes() {
+      routeLayers.forEach(layer => plannerMap.removeLayer(layer));
+      routeLayers = [];
+      routeResults.style.display = 'none';
+      currentRoutes = [];
+    }
+    
+    // Clear all points
+    function clearPoints() {
+      if (startMarker) {
+        plannerMap.removeLayer(startMarker);
+        startMarker = null;
+      }
+      if (endMarker) {
+        plannerMap.removeLayer(endMarker);
+        endMarker = null;
+      }
+      
+      startLatInput.value = '';
+      startLonInput.value = '';
+      endLatInput.value = '';
+      endLonInput.value = '';
+      
+      clearRoutes();
+      clickMode = 'start';
+    }
+    
+    // Find routes
+    async function findRoutes() {
+      const startLat = parseFloat(startLatInput.value);
+      const startLon = parseFloat(startLonInput.value);
+      const endLat = parseFloat(endLatInput.value);
+      const endLon = parseFloat(endLonInput.value);
+      
+      if (!startLat || !startLon || !endLat || !endLon) {
+        showError('Please set both start and end points');
+        return;
+      }
+      
+      const optimization = document.querySelector('input[name="optimization"]:checked').value;
+      const preferLowRoughness = optimization === 'smooth';
+      
+      hideError();
+      showLoading(true);
+      clearRoutes();
+      
+      try {
+        const response = await fetch('/api/route-optimization', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            startLat,
+            startLon,
+            endLat,
+            endLon,
+            preferLowRoughness
+          })
+        });
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        currentRoutes = [data.directRoute, ...data.alternativeRoutes];
+        
+        displayRoutes(currentRoutes);
+        
+      } catch (error) {
+        console.error('Error finding routes:', error);
+        showError('Error finding routes: ' + error.message);
+      } finally {
+        showLoading(false);
+      }
+    }
+    
+    // Display routes on map and in results
+    function displayRoutes(routes) {
+      clearRoutes();
+      
+      routes.forEach((route, index) => {
+        const color = index === 0 ? '#007bff' : '#28a745'; // Blue for direct, green for alternatives
+        const weight = index === 0 ? 4 : 6;
+        
+        const routeLine = L.polyline(
+          route.coordinates.map(coord => [coord[1], coord[0]]), // [lng, lat] to [lat, lng]
+          {
+            color: color,
+            weight: weight,
+            opacity: 0.8
+          }
+        ).addTo(plannerMap);
+        
+        routeLine.bindPopup(`
+          <strong>${route.type === 'direct' ? 'Direct Route' : 'Optimized Route'}</strong><br>
+          Distance: ${(route.distance / 1000).toFixed(2)} km<br>
+          Estimated Roughness: ${route.estimatedRoughness.toFixed(2)}
+        `);
+        
+        routeLayers.push(routeLine);
+      });
+      
+      // Fit map to show all routes
+      if (routeLayers.length > 0) {
+        const group = new L.featureGroup(routeLayers);
+        plannerMap.fitBounds(group.getBounds().pad(0.1));
+      }
+      
+      // Display route results
+      displayRouteResults(routes);
+    }
+    
+    // Display route results in the UI
+    function displayRouteResults(routes) {
+      routesList.innerHTML = '';
+      
+      routes.forEach((route, index) => {
+        const routeCard = document.createElement('div');
+        routeCard.className = 'route-card';
+        
+        const roughnessClass = getRoughnessClass(route.estimatedRoughness);
+        
+        routeCard.innerHTML = `
+          <div class="route-header">
+            <span class="route-type">
+              ${route.type === 'direct' ? '🎯 Direct Route' : '⚡ Optimized Route'}
+            </span>
+            <span class="roughness-indicator ${roughnessClass}">
+              ${getRoughnessLabel(route.estimatedRoughness)}
+            </span>
+          </div>
+          <div class="route-metrics">
+            <div class="metric">
+              <div class="metric-value">${(route.distance / 1000).toFixed(2)}</div>
+              <div class="metric-label">km</div>
+            </div>
+            <div class="metric">
+              <div class="metric-value ${roughnessClass}">${route.estimatedRoughness.toFixed(2)}</div>
+              <div class="metric-label">roughness</div>
+            </div>
+            <div class="metric">
+              <div class="metric-value">${Math.ceil(route.distance / 1000 * 3)}</div>
+              <div class="metric-label">min (est.)</div>
+            </div>
+          </div>
+        `;
+        
+        routeCard.addEventListener('click', () => {
+          // Highlight selected route
+          document.querySelectorAll('.route-card').forEach(card => 
+            card.classList.remove('selected')
+          );
+          routeCard.classList.add('selected');
+          
+          // Focus on selected route
+          if (routeLayers[index]) {
+            plannerMap.fitBounds(routeLayers[index].getBounds().pad(0.1));
+            routeLayers[index].openPopup();
+          }
+        });
+        
+        routesList.appendChild(routeCard);
+      });
+      
+      routeResults.style.display = 'block';
+    }
+    
+    // Get roughness CSS class
+    function getRoughnessClass(roughness) {
+      if (roughness <= 6) return 'roughness-low';
+      if (roughness <= 15) return 'roughness-medium';
+      return 'roughness-high';
+    }
+    
+    // Get roughness label
+    function getRoughnessLabel(roughness) {
+      if (roughness <= 3) return 'Very Smooth';
+      if (roughness <= 6) return 'Smooth';
+      if (roughness <= 9) return 'Moderate';
+      if (roughness <= 15) return 'Rough';
+      if (roughness <= 21) return 'Very Rough';
+      return 'Extremely Rough';
+    }
+    
+    // Get current location
+    function useCurrentLocation() {
+      if (!navigator.geolocation) {
+        showError('Geolocation is not supported by this browser');
+        return;
+      }
+      
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const lat = position.coords.latitude;
+          const lon = position.coords.longitude;
+          setStartPoint(lat, lon);
+          plannerMap.setView([lat, lon], 15);
+        },
+        (error) => {
+          showError('Error getting current location: ' + error.message);
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 60000
+        }
+      );
+    }
+    
+    // Update coordinates when inputs change
+    function updateMarkersFromInputs() {
+      const startLat = parseFloat(startLatInput.value);
+      const startLon = parseFloat(startLonInput.value);
+      const endLat = parseFloat(endLatInput.value);
+      const endLon = parseFloat(endLonInput.value);
+      
+      if (startLat && startLon) {
+        setStartPoint(startLat, startLon);
+      }
+      if (endLat && endLon) {
+        setEndPoint(endLat, endLon);
+      }
+    }
+    
+    // Utility functions
+    function showLoading(show) {
+      loadingIndicator.style.display = show ? 'block' : 'none';
+    }
+    
+    function showError(message) {
+      errorMessage.textContent = message;
+      errorMessage.style.display = 'block';
+    }
+    
+    function hideError() {
+      errorMessage.style.display = 'none';
+    }
+    
+    // Event listeners
+    document.addEventListener('DOMContentLoaded', () => {
+      initializePlannerMap();
+      
+      findRoutesButton.addEventListener('click', findRoutes);
+      clearPointsButton.addEventListener('click', clearPoints);
+      useCurrentLocationButton.addEventListener('click', useCurrentLocation);
+      
+      // Update markers when inputs change
+      [startLatInput, startLonInput, endLatInput, endLonInput].forEach(input => {
+        input.addEventListener('change', updateMarkersFromInputs);
+      });
+    });
+  </script>
+</body>
+</html>
