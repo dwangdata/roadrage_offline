@@ -4,6 +4,10 @@ let currentRideDataPoints = [], accelerometerBuffer = [];
 let latestGpsPosition = null, watchId = null, motionListenerActive = false;
 let dataCollectionInterval = null, lastLowPassZ = 0;
 
+// Backend integration settings
+const USE_BACKEND = true; // Set to false to use IndexedDB only
+const BACKEND_URL = window.location.origin;
+
 // Visible Leaflet map (full UI)
 let map, currentLocationMarker, currentRidePath, historicalRoughnessLayer;
 let mapInitialized = false;
@@ -60,7 +64,70 @@ function promisifiedDbRequest(req) {
   });
 }
 
-// --- Utility Functions ---
+// --- Backend API Helper Functions ---
+async function apiRequest(endpoint, options = {}) {
+  if (!USE_BACKEND) return null;
+  
+  try {
+    const response = await fetch(`${BACKEND_URL}/api${endpoint}`, {
+      headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+      },
+      ...options
+    });
+    
+    if (!response.ok) {
+      console.warn(`API request failed: ${response.status} ${response.statusText}`);
+      return null;
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.warn('Backend API unavailable, falling back to IndexedDB:', error.message);
+    return null;
+  }
+}
+
+// --- Enhanced Data Storage (IndexedDB + Backend) ---
+async function saveRideToBackend(rideData) {
+  return await apiRequest('/rides', {
+    method: 'POST',
+    body: JSON.stringify(rideData)
+  });
+}
+
+async function updateRideInBackend(rideId, updateData) {
+  return await apiRequest(`/rides/${rideId}`, {
+    method: 'PUT',
+    body: JSON.stringify(updateData)
+  });
+}
+
+async function saveDataPointsToBackend(rideId, dataPoints) {
+  // Send data points in batches to avoid large payloads
+  const batchSize = 10;
+  const batches = [];
+  
+  for (let i = 0; i < dataPoints.length; i += batchSize) {
+    batches.push(dataPoints.slice(i, i + batchSize));
+  }
+  
+  for (const batch of batches) {
+    await apiRequest(`/rides/${rideId}/datapoints`, {
+      method: 'POST',
+      body: JSON.stringify({ dataPoints: batch })
+    });
+  }
+}
+
+async function loadRidesFromBackend() {
+  return await apiRequest('/rides');
+}
+
+async function loadRideDetailsFromBackend(rideId) {
+  return await apiRequest(`/rides/${rideId}`);
+}
 function calculateVariance(arr) { if (!arr.length) return 0; const m = arr.reduce((s,v)=>s+v,0)/arr.length; return arr.reduce((s,v)=>s+(v-m)**2,0)/arr.length; }
 function getGeoId(lat, lon, prec = 4) { return `${lat.toFixed(prec)}_${lon.toFixed(prec)}`; }
 function toRad(d) { return d * Math.PI / 180; }
@@ -577,6 +644,7 @@ function saveRecording() {
 }
 
 // --- App Controls ---
+// --- Enhanced Start Ride (with backend support) ---
 async function startRide() {
   if (currentRideId) return;
   currentRideId = Date.now();
@@ -606,12 +674,21 @@ async function startRide() {
 
   dataCollectionInterval = setInterval(processCombinedDataPoint, DATA_INTERVAL_MS);
 
+  // Save to IndexedDB
   const tx = db.transaction('rides', 'readwrite');
   await promisifiedDbRequest(tx.objectStore('rides').add({
     rideId: currentRideId, startTime: currentRideId, endTime: null,
     duration: 0, totalDataPoints: 0, status: 'active'
   }));
   await tx.complete;
+
+  // Save to backend
+  if (USE_BACKEND) {
+    await saveRideToBackend({
+      rideId: currentRideId,
+      startTime: currentRideId
+    });
+  }
 
   if (vibrationChart) { chartDataset.length = 0; vibrationChart.data.datasets[0].data = chartDataset; vibrationChart.update(); }
 
@@ -620,6 +697,7 @@ async function startRide() {
   statusDiv && (statusDiv.textContent = 'Recording… waiting for GPS.');
 }
 
+// --- Enhanced Stop Ride (with backend support) ---
 async function stopRide() {
   if (!currentRideId) return;
   if (watchId !== null) { navigator.geolocation.clearWatch(watchId); watchId = null; }
@@ -629,16 +707,33 @@ async function stopRide() {
   statusDiv && (statusDiv.textContent = 'Saving ride…');
 
   try {
+    // Save to IndexedDB
     const tx = db.transaction(['rides','rideDataPoints'], 'readwrite');
     const ridesStore = tx.objectStore('rides');
     const dpStore    = tx.objectStore('rideDataPoints');
     for (const dp of currentRideDataPoints) await promisifiedDbRequest(dpStore.put(dp));
     const rr = await promisifiedDbRequest(ridesStore.get(currentRideId));
-    const upd = { ...rr, endTime: Date.now(), duration: Math.floor((Date.now() - rr.startTime)/1000), totalDataPoints: currentRideDataPoints.length, status: 'completed' };
+    const endTime = Date.now();
+    const duration = Math.floor((endTime - rr.startTime)/1000);
+    const upd = { ...rr, endTime: endTime, duration: duration, totalDataPoints: currentRideDataPoints.length, status: 'completed' };
     await promisifiedDbRequest(ridesStore.put(upd));
     await tx.complete;
-    statusDiv && (statusDiv.textContent = 'Ride saved!');
-  } catch { statusDiv && (statusDiv.textContent = 'Error saving ride.'); }
+
+    // Save to backend
+    if (USE_BACKEND && currentRideDataPoints.length > 0) {
+      await saveDataPointsToBackend(currentRideId, currentRideDataPoints);
+      await updateRideInBackend(currentRideId, {
+        endTime: endTime,
+        duration: duration,
+        totalDataPoints: currentRideDataPoints.length,
+        status: 'completed'
+      });
+    }
+
+    statusDiv && (statusDiv.textContent = USE_BACKEND ? 'Ride saved to database and backend!' : 'Ride saved!');
+  } catch { 
+    statusDiv && (statusDiv.textContent = 'Error saving ride.'); 
+  }
 
   currentRideId = null;
   currentRideDataPoints = [];
