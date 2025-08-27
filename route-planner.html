@@ -197,6 +197,121 @@
       color: #1565c0;
       text-align: center;
     }
+    
+    .past-rides-section {
+      background: #fff;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      margin-bottom: 20px;
+    }
+    
+    .past-rides-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+    
+    .rides-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+      gap: 10px;
+      max-height: 200px;
+      overflow-y: auto;
+      border: 1px solid #e0f2f7;
+      border-radius: 8px;
+      padding: 10px;
+    }
+    
+    .ride-checkbox-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px;
+      border-radius: 6px;
+      background: #f8f9fa;
+      transition: background-color 0.2s;
+    }
+    
+    .ride-checkbox-item:hover {
+      background: #e9ecef;
+    }
+    
+    .ride-checkbox-item input[type="checkbox"] {
+      margin: 0;
+    }
+    
+    .ride-info {
+      flex: 1;
+      font-size: 12px;
+    }
+    
+    .ride-date {
+      font-weight: bold;
+      color: #2c3e50;
+    }
+    
+    .ride-stats {
+      color: #666;
+    }
+    
+    .statistics-section {
+      background: #fff;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      margin-top: 20px;
+    }
+    
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+      margin-top: 15px;
+    }
+    
+    .stat-card {
+      background: #f8f9fa;
+      padding: 15px;
+      border-radius: 8px;
+      text-align: center;
+    }
+    
+    .stat-value {
+      font-size: 24px;
+      font-weight: bold;
+      color: #007bff;
+      margin-bottom: 5px;
+    }
+    
+    .stat-label {
+      font-size: 14px;
+      color: #666;
+      text-transform: uppercase;
+    }
+    
+    .legend {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      margin-top: 10px;
+      flex-wrap: wrap;
+    }
+    
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 12px;
+    }
+    
+    .legend-color {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      border: 1px solid #000;
+    }
   </style>
 </head>
 <body>
@@ -208,6 +323,46 @@
     
     <h1>FleetSense - Route Planner</h1>
     
+    <div class="past-rides-section">
+      <div class="past-rides-header">
+        <h3>Past Rides Display</h3>
+        <div>
+          <button id="selectAllRidesButton" class="btn-sm">Select All</button>
+          <button id="clearAllRidesButton" class="btn-sm">Clear All</button>
+        </div>
+      </div>
+      <div id="ridesGrid" class="rides-grid">
+        <div class="loading">Loading past rides...</div>
+      </div>
+      <div class="legend">
+        <span><strong>Roughness Legend:</strong></span>
+        <div class="legend-item">
+          <div class="legend-color" style="background-color: #00ff00;"></div>
+          <span>Very Smooth (0-3)</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color" style="background-color: #7fff00;"></div>
+          <span>Smooth (3-6)</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color" style="background-color: #ffff00;"></div>
+          <span>Moderate (6-9)</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color" style="background-color: #ff7f00;"></div>
+          <span>Rough (9-15)</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color" style="background-color: #ff0000;"></div>
+          <span>Very Rough (15-21)</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color" style="background-color: #8b0000;"></div>
+          <span>Extremely Rough (21+)</span>
+        </div>
+      </div>
+    </div>
+
     <div class="planner-controls">
       <div class="click-instruction">
         Click on the map to set start (green) and end (red) points, or enter coordinates manually
@@ -265,6 +420,36 @@
     </div>
     
     <div id="errorMessage" class="error" style="display: none;"></div>
+    
+    <div id="statisticsSection" class="statistics-section">
+      <h3>Route Statistics Summary</h3>
+      <div id="statsGrid" class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-value" id="totalRidesCount">0</div>
+          <div class="stat-label">Selected Rides</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="totalDistance">0.0 km</div>
+          <div class="stat-label">Total Distance</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="avgRoughness">0.0</div>
+          <div class="stat-label">Avg Roughness</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="totalDuration">0h 0m</div>
+          <div class="stat-label">Total Duration</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="maxRoughness">0.0</div>
+          <div class="stat-label">Max Roughness</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="minRoughness">0.0</div>
+          <div class="stat-label">Min Roughness</div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- Libraries -->
@@ -275,6 +460,11 @@
     let plannerMap, startMarker, endMarker, routeLayers = [];
     let roughnessLayer, currentRoutes = [];
     let clickMode = 'start'; // 'start' or 'end'
+    
+    // Past rides state
+    let pastRides = [];
+    let selectedRideIds = new Set();
+    let pastRideLayers = new Map(); // rideId -> layer group
     
     // DOM elements
     const startLatInput = document.getElementById('startLat');
@@ -289,39 +479,63 @@
     const loadingIndicator = document.getElementById('loadingIndicator');
     const errorMessage = document.getElementById('errorMessage');
     
+    // Past rides elements
+    const ridesGrid = document.getElementById('ridesGrid');
+    const selectAllRidesButton = document.getElementById('selectAllRidesButton');
+    const clearAllRidesButton = document.getElementById('clearAllRidesButton');
+    
+    // Statistics elements
+    const totalRidesCount = document.getElementById('totalRidesCount');
+    const totalDistance = document.getElementById('totalDistance');
+    const avgRoughness = document.getElementById('avgRoughness');
+    const totalDuration = document.getElementById('totalDuration');
+    const maxRoughness = document.getElementById('maxRoughness');
+    const minRoughness = document.getElementById('minRoughness');
+    
     // Initialize map
     function initializePlannerMap() {
-      plannerMap = L.map('routePlannerMap').setView([51.0447, -114.0719], 13);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; OpenStreetMap contributors'
-      }).addTo(plannerMap);
-      
-      // Create layer for roughness data
-      roughnessLayer = L.layerGroup().addTo(plannerMap);
-      
-      // Map click handler
-      plannerMap.on('click', function(e) {
-        const lat = e.latlng.lat;
-        const lon = e.latlng.lng;
+      try {
+        plannerMap = L.map('routePlannerMap').setView([51.0447, -114.0719], 13);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(plannerMap);
         
-        if (clickMode === 'start' || (!startMarker && !endMarker)) {
-          setStartPoint(lat, lon);
-          clickMode = 'end';
-        } else {
-          setEndPoint(lat, lon);
-          clickMode = 'start';
+        // Create layer for roughness data
+        roughnessLayer = L.layerGroup().addTo(plannerMap);
+        
+        // Map click handler
+        plannerMap.on('click', function(e) {
+          const lat = e.latlng.lat;
+          const lon = e.latlng.lng;
+          
+          if (clickMode === 'start' || (!startMarker && !endMarker)) {
+            setStartPoint(lat, lon);
+            clickMode = 'end';
+          } else {
+            setEndPoint(lat, lon);
+            clickMode = 'start';
+          }
+        });
+        
+        // Load and display roughness data
+        loadRoughnessData();
+        
+        setTimeout(() => plannerMap.invalidateSize(), 200);
+      } catch (error) {
+        console.warn('Map initialization failed - Leaflet not available:', error);
+        // Show map placeholder
+        const mapElement = document.getElementById('routePlannerMap');
+        if (mapElement) {
+          mapElement.innerHTML = '<div style="height: 100%; background: #f0f0f0; display: flex; align-items: center; justify-content: center; color: #666;">Map not available - External resources blocked</div>';
         }
-      });
-      
-      // Load and display roughness data
-      loadRoughnessData();
-      
-      setTimeout(() => plannerMap.invalidateSize(), 200);
+      }
     }
     
     // Load roughness data from API
     async function loadRoughnessData() {
       try {
+        if (!plannerMap) return; // Skip if map not available
+        
         const response = await fetch('/api/roughness-map');
         const roughnessData = await response.json();
         
@@ -639,6 +853,312 @@
       }
     }
     
+    // === Past Rides Functions ===
+    
+    // Load past rides from API
+    async function loadPastRides() {
+      try {
+        ridesGrid.innerHTML = '<div class="loading">Loading past rides...</div>';
+        
+        const response = await fetch('/api/rides');
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        pastRides = await response.json();
+        displayPastRidesGrid();
+        
+        // Select all rides by default
+        selectedRideIds.clear();
+        pastRides.forEach(ride => selectedRideIds.add(ride.rideId));
+        updateRideCheckboxes();
+        displaySelectedRides();
+        updateStatistics();
+        
+      } catch (error) {
+        console.error('Error loading past rides:', error);
+        ridesGrid.innerHTML = '<div class="error">Error loading past rides. No historical data available.</div>';
+        updateStatistics(); // Show zero stats
+      }
+    }
+    
+    // Display past rides in the grid
+    function displayPastRidesGrid() {
+      if (pastRides.length === 0) {
+        ridesGrid.innerHTML = '<div class="loading">No past rides recorded yet.</div>';
+        return;
+      }
+      
+      ridesGrid.innerHTML = '';
+      
+      pastRides.forEach(ride => {
+        const rideDiv = document.createElement('div');
+        rideDiv.className = 'ride-checkbox-item';
+        
+        const startDate = new Date(ride.startTime).toLocaleDateString();
+        const startTime = new Date(ride.startTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+        const duration = formatDuration(ride.duration || 0);
+        
+        rideDiv.innerHTML = `
+          <input type="checkbox" id="ride-${ride.rideId}" data-ride-id="${ride.rideId}">
+          <label for="ride-${ride.rideId}" class="ride-info">
+            <div class="ride-date">${startDate} ${startTime}</div>
+            <div class="ride-stats">${duration} • ${ride.totalDataPoints || 0} points</div>
+          </label>
+        `;
+        
+        const checkbox = rideDiv.querySelector('input[type="checkbox"]');
+        checkbox.addEventListener('change', handleRideSelection);
+        
+        ridesGrid.appendChild(rideDiv);
+      });
+    }
+    
+    // Handle individual ride selection
+    function handleRideSelection(event) {
+      const rideId = parseInt(event.target.dataset.rideId);
+      
+      if (event.target.checked) {
+        selectedRideIds.add(rideId);
+      } else {
+        selectedRideIds.delete(rideId);
+      }
+      
+      displaySelectedRides();
+      updateStatistics();
+    }
+    
+    // Update checkbox states
+    function updateRideCheckboxes() {
+      pastRides.forEach(ride => {
+        const checkbox = document.getElementById(`ride-${ride.rideId}`);
+        if (checkbox) {
+          checkbox.checked = selectedRideIds.has(ride.rideId);
+        }
+      });
+    }
+    
+    // Display selected rides on the map
+    async function displaySelectedRides() {
+      // Clear existing past ride layers
+      if (plannerMap) {
+        pastRideLayers.forEach(layerGroup => {
+          plannerMap.removeLayer(layerGroup);
+        });
+      }
+      pastRideLayers.clear();
+      
+      // Load and display each selected ride
+      for (const rideId of selectedRideIds) {
+        await displayRideOnMap(rideId);
+      }
+    }
+    
+    // Display a specific ride on the map
+    async function displayRideOnMap(rideId) {
+      try {
+        if (!plannerMap) {
+          console.log(`Map not available - skipping display of ride ${rideId}`);
+          return;
+        }
+        
+        const response = await fetch(`/api/rides/${rideId}`);
+        if (!response.ok) {
+          console.warn(`Failed to load ride ${rideId}`);
+          return;
+        }
+        
+        const rideData = await response.json();
+        const dataPoints = rideData.dataPoints;
+        
+        if (!dataPoints || dataPoints.length === 0) {
+          console.warn(`No data points for ride ${rideId}`);
+          return;
+        }
+        
+        // Create layer group for this ride
+        const layerGroup = L.layerGroup();
+        
+        // Sort data points by timestamp
+        dataPoints.sort((a, b) => a.timestamp - b.timestamp);
+        
+        // Create path with color-coded segments based on roughness
+        for (let i = 1; i < dataPoints.length; i++) {
+          const prevPoint = dataPoints[i - 1];
+          const currPoint = dataPoints[i];
+          
+          const color = getRoughnessColor(currPoint.roughnessValue);
+          const segment = L.polyline([
+            [prevPoint.latitude, prevPoint.longitude],
+            [currPoint.latitude, currPoint.longitude]
+          ], {
+            color: color,
+            weight: 4,
+            opacity: 0.8
+          });
+          
+          segment.bindPopup(`
+            <strong>Past Ride Data</strong><br>
+            Ride: ${new Date(rideData.ride.startTime).toLocaleDateString()}<br>
+            Time: ${new Date(currPoint.timestamp).toLocaleTimeString()}<br>
+            Roughness: ${currPoint.roughnessValue.toFixed(2)}<br>
+            Location: ${currPoint.latitude.toFixed(5)}, ${currPoint.longitude.toFixed(5)}
+          `);
+          
+          layerGroup.addLayer(segment);
+        }
+        
+        // Add roughness points as circles
+        dataPoints.forEach(point => {
+          const circle = L.circleMarker([point.latitude, point.longitude], {
+            radius: 3,
+            fillColor: getRoughnessColor(point.roughnessValue),
+            color: '#000',
+            weight: 1,
+            opacity: 0.9,
+            fillOpacity: 0.9
+          });
+          
+          circle.bindPopup(`
+            <strong>Roughness: ${point.roughnessValue.toFixed(2)}</strong><br>
+            Time: ${new Date(point.timestamp).toLocaleTimeString()}<br>
+            Location: ${point.latitude.toFixed(5)}, ${point.longitude.toFixed(5)}
+          `);
+          
+          layerGroup.addLayer(circle);
+        });
+        
+        // Add to map and store reference
+        layerGroup.addTo(plannerMap);
+        pastRideLayers.set(rideId, layerGroup);
+        
+      } catch (error) {
+        console.error(`Error loading ride ${rideId}:`, error);
+      }
+    }
+    
+    // Update statistics based on selected rides
+    async function updateStatistics() {
+      if (selectedRideIds.size === 0) {
+        totalRidesCount.textContent = '0';
+        totalDistance.textContent = '0.0 km';
+        avgRoughness.textContent = '0.0';
+        totalDuration.textContent = '0h 0m';
+        maxRoughness.textContent = '0.0';
+        minRoughness.textContent = '0.0';
+        return;
+      }
+      
+      let stats = {
+        totalRides: selectedRideIds.size,
+        totalDistance: 0,
+        totalDuration: 0,
+        roughnessValues: []
+      };
+      
+      // Calculate statistics from selected rides
+      for (const rideId of selectedRideIds) {
+        const ride = pastRides.find(r => r.rideId === rideId);
+        if (!ride) continue;
+        
+        stats.totalDuration += ride.duration || 0;
+        
+        try {
+          // Load ride data points to calculate distance and roughness stats
+          const response = await fetch(`/api/rides/${rideId}`);
+          if (!response.ok) continue;
+          
+          const rideData = await response.json();
+          const dataPoints = rideData.dataPoints;
+          
+          if (dataPoints && dataPoints.length > 1) {
+            // Calculate distance
+            let rideDistance = 0;
+            dataPoints.sort((a, b) => a.timestamp - b.timestamp);
+            
+            for (let i = 1; i < dataPoints.length; i++) {
+              const prev = dataPoints[i - 1];
+              const curr = dataPoints[i];
+              rideDistance += calculateDistance(prev.latitude, prev.longitude, curr.latitude, curr.longitude);
+            }
+            
+            stats.totalDistance += rideDistance;
+            
+            // Collect roughness values
+            dataPoints.forEach(point => {
+              stats.roughnessValues.push(point.roughnessValue);
+            });
+          }
+        } catch (error) {
+          console.warn(`Error calculating stats for ride ${rideId}:`, error);
+        }
+      }
+      
+      // Update display
+      totalRidesCount.textContent = stats.totalRides.toString();
+      totalDistance.textContent = (stats.totalDistance / 1000).toFixed(2) + ' km';
+      totalDuration.textContent = formatDuration(stats.totalDuration);
+      
+      if (stats.roughnessValues.length > 0) {
+        const avgRough = stats.roughnessValues.reduce((sum, val) => sum + val, 0) / stats.roughnessValues.length;
+        const maxRough = Math.max(...stats.roughnessValues);
+        const minRough = Math.min(...stats.roughnessValues);
+        
+        avgRoughness.textContent = avgRough.toFixed(2);
+        maxRoughness.textContent = maxRough.toFixed(2);
+        minRoughness.textContent = minRough.toFixed(2);
+      } else {
+        avgRoughness.textContent = '0.0';
+        maxRoughness.textContent = '0.0';
+        minRoughness.textContent = '0.0';
+      }
+    }
+    
+    // Helper function to calculate distance between two points
+    function calculateDistance(lat1, lon1, lat2, lon2) {
+      const R = 6371e3; // Earth's radius in meters
+      const φ1 = lat1 * Math.PI / 180;
+      const φ2 = lat2 * Math.PI / 180;
+      const Δφ = (lat2 - lat1) * Math.PI / 180;
+      const Δλ = (lon2 - lon1) * Math.PI / 180;
+
+      const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+                Math.cos(φ1) * Math.cos(φ2) *
+                Math.sin(Δλ/2) * Math.sin(Δλ/2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+
+      return R * c;
+    }
+    
+    // Format duration in seconds to readable format
+    function formatDuration(seconds) {
+      const hours = Math.floor(seconds / 3600);
+      const minutes = Math.floor((seconds % 3600) / 60);
+      
+      if (hours > 0) {
+        return `${hours}h ${minutes}m`;
+      } else {
+        return `${minutes}m`;
+      }
+    }
+    
+    // Select all rides
+    function selectAllRides() {
+      selectedRideIds.clear();
+      pastRides.forEach(ride => selectedRideIds.add(ride.rideId));
+      updateRideCheckboxes();
+      displaySelectedRides();
+      updateStatistics();
+    }
+    
+    // Clear all rides
+    function clearAllRides() {
+      selectedRideIds.clear();
+      updateRideCheckboxes();
+      displaySelectedRides();
+      updateStatistics();
+    }
+    
     // Utility functions
     function showLoading(show) {
       loadingIndicator.style.display = show ? 'block' : 'none';
@@ -657,9 +1177,16 @@
     document.addEventListener('DOMContentLoaded', () => {
       initializePlannerMap();
       
+      // Load past rides independently of map initialization
+      loadPastRides();
+      
       findRoutesButton.addEventListener('click', findRoutes);
       clearPointsButton.addEventListener('click', clearPoints);
       useCurrentLocationButton.addEventListener('click', useCurrentLocation);
+      
+      // Past rides event listeners
+      selectAllRidesButton.addEventListener('click', selectAllRides);
+      clearAllRidesButton.addEventListener('click', clearAllRides);
       
       // Update markers when inputs change
       [startLatInput, startLonInput, endLatInput, endLonInput].forEach(input => {
