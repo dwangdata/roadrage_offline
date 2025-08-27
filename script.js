@@ -195,31 +195,47 @@ function initChart() {
 
 // --- Recap Map & Chart ---
 function initRecapMap() {
+  if (typeof L === 'undefined') {
+    console.warn('Leaflet not loaded, skipping map initialization');
+    return;
+  }
   if (recapMap) recapMap.remove();
   const recapEl = document.getElementById('recapMap'); if (!recapEl) return;
-  recapMap = L.map('recapMap').setView([51.0447, -114.0719], 13);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap contributors' }).addTo(recapMap);
-  setTimeout(() => recapMap.invalidateSize(), 200);
-  recapHistoricalLayer = L.layerGroup().addTo(recapMap);
-  recapRidePath = L.polyline([], { weight: 5 }).addTo(recapMap);
+  try {
+    recapMap = L.map('recapMap').setView([51.0447, -114.0719], 13);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap contributors' }).addTo(recapMap);
+    setTimeout(() => recapMap.invalidateSize(), 200);
+    recapHistoricalLayer = L.layerGroup().addTo(recapMap);
+    recapRidePath = L.polyline([], { weight: 5 }).addTo(recapMap);
+  } catch (error) {
+    console.warn('Error initializing recap map:', error);
+  }
 }
 function initRecapChart() {
+  if (typeof Chart === 'undefined') {
+    console.warn('Chart.js not loaded, skipping chart initialization');
+    return;
+  }
   const canvas = document.getElementById('recapChart'); if (!canvas) return;
   const ctx = canvas.getContext('2d');
   if (recapChart) recapChart.destroy();
-  recapChart = new Chart(ctx, {
-    type: 'line',
-    data: { datasets: [{ label: 'Vibration', data: [], pointRadius: 4, borderWidth: 2, tension: 0.3 }] },
-    options: {
-      parsing: { xAxisKey: 'x', yAxisKey: 'y' },
-      scales: { x: { type: 'time', time: { tooltipFormat: 'HH:mm:ss' } }, y: { beginAtZero: true } },
-      plugins: { tooltip: { callbacks: {
-        label: c => `Roughness: ${c.parsed.y.toFixed(2)}`,
-        afterBody: c => { const dp = recapChart.data.datasets[0].data[c[0].dataIndex].meta; return `Lat: ${dp.latitude.toFixed(5)}, Lon: ${dp.longitude.toFixed(5)}`; }
-      } } },
-      onHover: (_, items) => { if (items.length) highlightRecapPointOnMap(items[0].dataIndex); }
-    }
-  });
+  try {
+    recapChart = new Chart(ctx, {
+      type: 'line',
+      data: { datasets: [{ label: 'Vibration', data: [], pointRadius: 4, borderWidth: 2, tension: 0.3 }] },
+      options: {
+        parsing: { xAxisKey: 'x', yAxisKey: 'y' },
+        scales: { x: { type: 'time', time: { tooltipFormat: 'HH:mm:ss' } }, y: { beginAtZero: true } },
+        plugins: { tooltip: { callbacks: {
+          label: c => `Roughness: ${c.parsed.y.toFixed(2)}`,
+          afterBody: c => { const dp = recapChart.data.datasets[0].data[c[0].dataIndex].meta; return `Lat: ${dp.latitude.toFixed(5)}, Lon: ${dp.longitude.toFixed(5)}`; }
+        } } },
+        onHover: (_, items) => { if (items.length) highlightRecapPointOnMap(items[0].dataIndex); }
+      }
+    });
+  } catch (error) {
+    console.warn('Error initializing recap chart:', error);
+  }
 }
 
 // --- Historical overlay (visible map) ---
@@ -761,19 +777,53 @@ function deleteDatabase() {
 // --- Past Rides & Recap ---
 async function loadPastRides() {
   pastRidesList && (pastRidesList.innerHTML = '');
-  if (!db) return;
-  try {
-    const all = await promisifiedDbRequest(db.transaction('rides','readonly').objectStore('rides').getAll());
-    if (!all.length) { pastRidesList && (pastRidesList.innerHTML = '<li>No past rides recorded.</li>'); return; }
-    all.sort((a,b)=>b.startTime - a.startTime).forEach(r => {
-      const li = document.createElement('li');
-      const start = new Date(r.startTime).toLocaleString();
-      const m = Math.floor(r.duration/60), s = r.duration%60;
-      li.innerHTML = `<strong>Start:</strong> ${start}<br><strong>Duration:</strong> ${m}m ${s}s<br><strong>Points:</strong> ${r.totalDataPoints}`;
-      li.onclick = () => showRideDetails(r.rideId);
-      pastRidesList && pastRidesList.appendChild(li);
-    });
-  } catch { statusDiv && (statusDiv.textContent = 'Error loading past rides.'); }
+  
+  let rides = [];
+  
+  // Try to load from backend first
+  if (USE_BACKEND) {
+    try {
+      const backendRides = await loadRidesFromBackend();
+      if (backendRides && Array.isArray(backendRides)) {
+        rides = backendRides;
+      }
+    } catch (error) {
+      console.warn('Failed to load rides from backend, falling back to IndexedDB:', error);
+    }
+  }
+  
+  // Fallback to IndexedDB if backend failed or returned no data
+  if (rides.length === 0 && db) {
+    try {
+      rides = await promisifiedDbRequest(db.transaction('rides','readonly').objectStore('rides').getAll());
+    } catch (error) {
+      console.error('Error loading rides from IndexedDB:', error);
+      statusDiv && (statusDiv.textContent = 'Error loading past rides.');
+      return;
+    }
+  }
+  
+  if (!rides.length) { 
+    pastRidesList && (pastRidesList.innerHTML = '<li>No past rides recorded.</li>'); 
+    return; 
+  }
+  
+  rides.sort((a,b)=>b.startTime - a.startTime).forEach(r => {
+    const li = document.createElement('li');
+    const start = new Date(r.startTime).toLocaleString();
+    const duration = r.duration || 0;
+    const m = Math.floor(duration/60), s = duration%60;
+    const totalPoints = r.totalDataPoints || 0;
+    li.innerHTML = `<strong>Start:</strong> ${start}<br><strong>Duration:</strong> ${m}m ${s}s<br><strong>Points:</strong> ${totalPoints}`;
+    li.onclick = () => showRideDetails(r.rideId);
+    li.style.cursor = 'pointer';
+    li.style.padding = '10px';
+    li.style.marginBottom = '5px';
+    li.style.border = '1px solid #ddd';
+    li.style.borderRadius = '5px';
+    li.style.backgroundColor = '#f9f9f9';
+    pastRidesList && pastRidesList.appendChild(li);
+  });
 }
 
 async function showRideDetails(rideId) {
@@ -781,32 +831,80 @@ async function showRideDetails(rideId) {
   detailContent && (detailContent.textContent = 'Loading…');
   initRecapMap(); initRecapChart();
 
-  const tx = db.transaction(['rides','rideDataPoints'],'readonly');
-  const rideRec = await promisifiedDbRequest(tx.objectStore('rides').get(rideId));
-  let dps = await promisifiedDbRequest(tx.objectStore('rideDataPoints').index('by_rideId').getAll(rideId));
-  await tx.complete;
+  let rideRec = null;
+  let dps = [];
 
-  if (!rideRec || !Array.isArray(dps) || dps.length === 0) { detailContent && (detailContent.textContent = 'No data for this ride.'); return; }
-
-  dps.sort((a,b)=>a.timestamp - b.timestamp);
-  const chartData = dps.map(dp => ({ x: new Date(dp.timestamp), y: dp.roughnessValue, meta: dp }));
-  recapChart && (recapChart.data.datasets[0].data = chartData, recapChart.update());
-
-  recapRidePath && recapRidePath.setLatLngs([]);
-  recapHistoricalLayer && recapHistoricalLayer.clearLayers();
-  dps.forEach(dp => {
-    const latlng = [dp.latitude, dp.longitude];
-    const pts = recapRidePath.getLatLngs();
-    const col = roughnessToColor(dp.roughnessValue);
-    if (pts.length) { const prev = pts[pts.length - 1]; recapMap && L.polyline([prev, latlng], { color: col, weight: 5 }).addTo(recapMap); }
-    recapRidePath.addLatLng(latlng);
-  });
-  if (dps.length > 0) {
-    const last = dps[dps.length - 1];
-    updateHistoricalDisplay(last.latitude, last.longitude, recapHistoricalLayer);
+  // Try to load from backend first
+  if (USE_BACKEND) {
+    try {
+      const backendData = await loadRideDetailsFromBackend(rideId);
+      if (backendData && backendData.ride && backendData.dataPoints) {
+        rideRec = backendData.ride;
+        dps = backendData.dataPoints;
+      }
+    } catch (error) {
+      console.warn('Failed to load ride details from backend, falling back to IndexedDB:', error);
+    }
   }
 
-  let txt = `Ride ID: ${rideRec.rideId}\nStart: ${new Date(rideRec.startTime).toLocaleString()}\nEnd: ${new Date(rideRec.endTime).toLocaleString()}\nDuration: ${Math.floor(rideRec.duration/60)}m ${rideRec.duration%60}s\nPoints: ${rideRec.totalDataPoints}\n\n— Data Points —\n`;
+  // Fallback to IndexedDB if backend failed or returned no data
+  if (!rideRec && db) {
+    try {
+      const tx = db.transaction(['rides','rideDataPoints'],'readonly');
+      rideRec = await promisifiedDbRequest(tx.objectStore('rides').get(rideId));
+      dps = await promisifiedDbRequest(tx.objectStore('rideDataPoints').index('by_rideId').getAll(rideId));
+      await tx.complete;
+    } catch (error) {
+      console.error('Error loading ride details from IndexedDB:', error);
+      detailContent && (detailContent.textContent = 'Error loading ride details.');
+      return;
+    }
+  }
+
+  if (!rideRec || !Array.isArray(dps) || dps.length === 0) { 
+    detailContent && (detailContent.textContent = 'No data for this ride.'); 
+    return; 
+  }
+
+  dps.sort((a,b)=>a.timestamp - b.timestamp);
+  
+  // Update chart if available
+  if (recapChart && recapChart.data && recapChart.data.datasets) {
+    const chartData = dps.map(dp => ({ x: new Date(dp.timestamp), y: dp.roughnessValue, meta: dp }));
+    recapChart.data.datasets[0].data = chartData;
+    recapChart.update();
+  }
+
+  // Update map if Leaflet is available
+  if (typeof L !== 'undefined' && recapMap) {
+    try {
+      recapRidePath && recapRidePath.setLatLngs([]);
+      recapHistoricalLayer && recapHistoricalLayer.clearLayers();
+      dps.forEach(dp => {
+        const latlng = [dp.latitude, dp.longitude];
+        const pts = recapRidePath.getLatLngs();
+        const col = roughnessToColor(dp.roughnessValue);
+        if (pts.length) { 
+          const prev = pts[pts.length - 1]; 
+          L.polyline([prev, latlng], { color: col, weight: 5 }).addTo(recapMap); 
+        }
+        recapRidePath.addLatLng(latlng);
+      });
+      if (dps.length > 0) {
+        const last = dps[dps.length - 1];
+        updateHistoricalDisplay(last.latitude, last.longitude, recapHistoricalLayer);
+        // Center the map on the route
+        const bounds = L.latLngBounds(dps.map(dp => [dp.latitude, dp.longitude]));
+        recapMap.fitBounds(bounds, { padding: [10, 10] });
+      }
+    } catch (error) {
+      console.warn('Error updating recap map:', error);
+    }
+  }
+
+  const endTime = rideRec.endTime || rideRec.startTime;
+  const duration = rideRec.duration || 0;
+  let txt = `Ride ID: ${rideRec.rideId}\nStart: ${new Date(rideRec.startTime).toLocaleString()}\nEnd: ${new Date(endTime).toLocaleString()}\nDuration: ${Math.floor(duration/60)}m ${duration%60}s\nPoints: ${rideRec.totalDataPoints || dps.length}\n\n— Data Points —\n`;
   dps.forEach(dp => { txt += `${new Date(dp.timestamp).toLocaleTimeString()} | Lat ${dp.latitude.toFixed(5)}, Lon ${dp.longitude.toFixed(5)} | Rough ${dp.roughnessValue.toFixed(3)}\n`; });
   detailContent && (detailContent.textContent = txt);
 }
