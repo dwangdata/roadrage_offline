@@ -10,5 +10,7 @@ services:
         value: production
       - key: PORT
         value: 10000
+      - key: RENDER
+        value: true
     domains:
       - roadrage-offline.onrender.com
