@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FleetSense - Deployment Status</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem;
+            background: #f5f5f5;
+        }
+        .status-card {
+            background: white;
+            border-radius: 8px;
+            padding: 2rem;
+            margin: 1rem 0;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .status-ok { border-left: 4px solid #22c55e; }
+        .status-error { border-left: 4px solid #ef4444; }
+        .status-warning { border-left: 4px solid #f59e0b; }
+        .btn {
+            display: inline-block;
+            padding: 12px 24px;
+            margin: 8px;
+            background: #3b82f6;
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 500;
+        }
+        .btn:hover { background: #2563eb; }
+        .btn-secondary {
+            background: #6b7280;
+        }
+        .btn-secondary:hover { background: #4b5563; }
+        pre {
+            background: #f3f4f6;
+            padding: 1rem;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+            margin: 1rem 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>🚛 FleetSense - Route Intelligence System</h1>
+    <p>Welcome to the FleetSense deployment status page. This shows the current health and status of your cloud-hosted road quality monitoring system.</p>
+
+    <div class="status-card status-ok">
+        <h2>✅ System Status</h2>
+        <p id="status-text">Checking system health...</p>
+        <div id="health-data"></div>
+    </div>
+
+    <div class="status-card">
+        <h2>🚀 Quick Access</h2>
+        <div class="grid">
+            <div>
+                <h3>Main Application</h3>
+                <a href="/" class="btn">📍 Live Tracking</a>
+                <p>Real-time road quality monitoring with GPS tracking</p>
+            </div>
+            <div>
+                <h3>Route Planning</h3>
+                <a href="/route-planner" class="btn">🗺️ Route Planner</a>
+                <p>Interactive route optimization based on road roughness data</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="status-card">
+        <h2>📊 API Endpoints</h2>
+        <div class="grid">
+            <div>
+                <h4>Health Check</h4>
+                <a href="/api/health" class="btn btn-secondary">Check Status</a>
+            </div>
+            <div>
+                <h4>All Rides</h4>
+                <a href="/api/rides" class="btn btn-secondary">View Rides</a>
+            </div>
+            <div>
+                <h4>Roughness Map</h4>
+                <a href="/api/roughness-map" class="btn btn-secondary">View Map Data</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="status-card">
+        <h2>🔧 Deployment Info</h2>
+        <p><strong>Hosting Platform:</strong> <span id="platform">Render.com</span></p>
+        <p><strong>Environment:</strong> <span id="environment">Loading...</span></p>
+        <p><strong>Version:</strong> <span id="version">Loading...</span></p>
+        <p><strong>Database:</strong> SQLite (persistent storage)</p>
+        <p><strong>Last Updated:</strong> <span id="last-updated">Loading...</span></p>
+    </div>
+
+    <div class="status-card">
+        <h2>📱 Getting Started</h2>
+        <ol>
+            <li><strong>Grant Permissions:</strong> Allow location and motion sensor access when prompted</li>
+            <li><strong>Start Tracking:</strong> Click "Start Trip" to begin monitoring road quality</li>
+            <li><strong>Drive Normally:</strong> The app automatically detects road roughness using device sensors</li>
+            <li><strong>View Data:</strong> See real-time charts and maps of road conditions</li>
+            <li><strong>Plan Routes:</strong> Use the route planner to optimize trips based on road quality</li>
+        </ol>
+    </div>
+
+    <div class="status-card">
+        <h2>ℹ️ About This Deployment</h2>
+        <p>This FleetSense instance is deployed on a cloud platform for easy access from anywhere. Key features:</p>
+        <ul>
+            <li>✅ Automatic HTTPS encryption</li>
+            <li>✅ Persistent data storage</li>
+            <li>✅ Mobile-optimized interface</li>
+            <li>✅ Real-time GPS and sensor integration</li>
+            <li>✅ Cross-platform compatibility</li>
+        </ul>
+        <p>For technical support or to deploy your own instance, see the <a href="https://github.com/dwangdata/roadrage_offline">GitHub repository</a>.</p>
+    </div>
+
+    <script>
+        // Check system health
+        async function checkHealth() {
+            try {
+                const response = await fetch('/api/health');
+                const health = await response.json();
+                
+                document.getElementById('status-text').textContent = 
+                    `System is running normally. Database: ${health.database}`;
+                
+                document.getElementById('environment').textContent = health.environment || 'Unknown';
+                document.getElementById('version').textContent = health.version || 'Unknown';
+                document.getElementById('last-updated').textContent = new Date(health.timestamp).toLocaleString();
+                
+                document.getElementById('health-data').innerHTML = 
+                    `<pre>${JSON.stringify(health, null, 2)}</pre>`;
+                    
+            } catch (error) {
+                document.getElementById('status-text').textContent = 
+                    `System error: ${error.message}`;
+                document.querySelector('.status-card').className = 'status-card status-error';
+            }
+        }
+        
+        // Check health on page load
+        checkHealth();
+        
+        // Auto-refresh every 30 seconds
+        setInterval(checkHealth, 30000);
+    </script>
+</body>
+</html>

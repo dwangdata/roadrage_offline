@@ -7,6 +7,9 @@ const path = require('path');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Environment configuration
+const isProduction = process.env.NODE_ENV === 'production';
+
 // Middleware
 app.use(cors());
 app.use(bodyParser.json({ limit: '10mb' }));
@@ -16,7 +19,14 @@ app.use(bodyParser.urlencoded({ extended: true, limit: '10mb' }));
 app.use(express.static(path.join(__dirname)));
 
 // Database setup
-const dbPath = path.join(__dirname, 'roadrage.db');
+const dbPath = isProduction 
+  ? path.join(process.cwd(), 'roadrage.db')  // Use current working directory in production
+  : path.join(__dirname, 'roadrage.db');
+  
+console.log(`Database path: ${dbPath}`);
+console.log(`Current working directory: ${process.cwd()}`);
+console.log(`__dirname: ${__dirname}`);
+
 const db = new sqlite3.Database(dbPath, (err) => {
   if (err) {
     console.error('Error opening database:', err.message);
@@ -454,7 +464,9 @@ app.get('/api/health', (req, res) => {
   res.json({ 
     status: 'OK', 
     timestamp: new Date().toISOString(),
-    database: 'connected'
+    database: 'connected',
+    environment: isProduction ? 'production' : 'development',
+    version: require('./package.json').version
   });
 });
 
@@ -468,9 +480,15 @@ app.get('/route-planner', (req, res) => {
   res.sendFile(path.join(__dirname, 'route-planner.html'));
 });
 
+// Serve the status page
+app.get('/status', (req, res) => {
+  res.sendFile(path.join(__dirname, 'status.html'));
+});
+
 // Start server
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Server running on http://0.0.0.0:${PORT}`);
+  console.log(`Environment: ${isProduction ? 'production' : 'development'}`);
   console.log('Frontend: http://localhost:' + PORT);
   console.log('Route Planner: http://localhost:' + PORT + '/route-planner');
   console.log('API Health: http://localhost:' + PORT + '/api/health');
@@ -487,4 +505,27 @@ process.on('SIGINT', () => {
     }
   });
   process.exit(0);
+});
+
+process.on('SIGTERM', () => {
+  console.log('Received SIGTERM, shutting down gracefully...');
+  db.close((err) => {
+    if (err) {
+      console.error('Error closing database:', err.message);
+    } else {
+      console.log('Database connection closed');
+    }
+  });
+  process.exit(0);
+});
+
+// Handle uncaught exceptions
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught Exception:', err);
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  process.exit(1);
 });
