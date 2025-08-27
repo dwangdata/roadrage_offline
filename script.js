@@ -783,10 +783,28 @@ async function stopRide() {
 function deleteDatabase() {
   if (!confirm("⚠️ Delete all ride data? This cannot be undone.")) return;
   statusDiv && (statusDiv.textContent = 'Deleting database...');
-  const del = indexedDB.deleteDatabase(DB_NAME);
-  del.onsuccess = () => { window.location.reload(); };
-  del.onerror = () => { statusDiv && (statusDiv.textContent = 'Error deleting database.'); };
-  del.onblocked = () => { statusDiv && (statusDiv.textContent = "Couldn't delete database. Close other tabs and retry."); };
+  // Clear backend database if enabled
+  if (USE_BACKEND) {
+    fetch('/api/clear-database', { method: 'POST' })
+      .then(res => res.json())
+      .then(result => {
+        statusDiv && (statusDiv.textContent = result.message || 'All backend data cleared.');
+        // Also clear IndexedDB
+        const del = indexedDB.deleteDatabase(DB_NAME);
+        del.onsuccess = () => { window.location.reload(); };
+        del.onerror = () => { statusDiv && (statusDiv.textContent = 'Error deleting database.'); };
+        del.onblocked = () => { statusDiv && (statusDiv.textContent = "Couldn't delete database. Close other tabs and retry."); };
+      })
+      .catch(err => {
+        statusDiv && (statusDiv.textContent = 'Error clearing backend data: ' + err.message);
+      });
+  } else {
+    // Only clear IndexedDB
+    const del = indexedDB.deleteDatabase(DB_NAME);
+    del.onsuccess = () => { window.location.reload(); };
+    del.onerror = () => { statusDiv && (statusDiv.textContent = 'Error deleting database.'); };
+    del.onblocked = () => { statusDiv && (statusDiv.textContent = "Couldn't delete database. Close other tabs and retry."); };
+  }
 }
 
 // --- Past Rides & Recap ---

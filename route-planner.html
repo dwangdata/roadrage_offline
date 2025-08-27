@@ -262,6 +262,7 @@
       border-radius: 12px;
       box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
       margin-top: 20px;
+      margin-bottom: 20px;
     }
     
     .stats-grid {
@@ -343,6 +344,7 @@
         <div>
           <button id="selectAllRidesButton" class="btn-sm">Select All</button>
           <button id="clearAllRidesButton" class="btn-sm">Clear All</button>
+          <button id="downloadSelectedRidesButton" class="btn-sm">Download Selected Rides</button>
         </div>
       </div>
       <div id="ridesGrid" class="rides-grid">
@@ -377,6 +379,35 @@
       </div>
     </div>
 
+    <div id="statisticsSection" class="statistics-section">
+      <h3>Route Statistics Summary</h3>
+      <div id="statsGrid" class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-value" id="totalRidesCount">0</div>
+          <div class="stat-label">Selected Rides</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="totalDistance">0.0 km</div>
+          <div class="stat-label">Total Distance</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="avgRoughness">0.0</div>
+          <div class="stat-label">Avg Roughness</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="totalDuration">0h 0m</div>
+          <div class="stat-label">Total Duration</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="maxRoughness">0.0</div>
+          <div class="stat-label">Max Roughness</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="minRoughness">0.0</div>
+          <div class="stat-label">Min Roughness</div>
+        </div>
+      </div>
+    </div>
     <div class="planner-controls">
       <div class="click-instruction">
         Click on the map to set start (green) and end (red) points, or enter coordinates manually
@@ -435,35 +466,7 @@
     
     <div id="errorMessage" class="error" style="display: none;"></div>
     
-    <div id="statisticsSection" class="statistics-section">
-      <h3>Route Statistics Summary</h3>
-      <div id="statsGrid" class="stats-grid">
-        <div class="stat-card">
-          <div class="stat-value" id="totalRidesCount">0</div>
-          <div class="stat-label">Selected Rides</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-value" id="totalDistance">0.0 km</div>
-          <div class="stat-label">Total Distance</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-value" id="avgRoughness">0.0</div>
-          <div class="stat-label">Avg Roughness</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-value" id="totalDuration">0h 0m</div>
-          <div class="stat-label">Total Duration</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-value" id="maxRoughness">0.0</div>
-          <div class="stat-label">Max Roughness</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-value" id="minRoughness">0.0</div>
-          <div class="stat-label">Min Roughness</div>
-        </div>
-      </div>
-    </div>
+    
   </div>
 
   <!-- Libraries -->
@@ -1051,7 +1054,70 @@
         console.error(`Error loading ride ${rideId}:`, error);
       }
     }
-    
+    // Download selected Rides
+    async function downloadSelectedRides() {
+      if (selectedRideIds.size === 0) {
+        showError('No rides selected to download.');
+        return;
+      }
+      function escapeCSV(val) {
+        if (val === null || val === undefined) return '';
+        val = val.toString();
+        if (val.includes(',') || val.includes('"') || val.includes('\n')) {
+          return '"' + val.replace(/"/g, '""') + '"';
+        }
+        return val;
+      }
+      let csvRows = [];
+      // CSV header
+      csvRows.push('rideId,rideStartTime,rideDuration,dataPointTimestamp,latitude,longitude,roughnessValue');
+      for (const rideId of selectedRideIds) {
+        try {
+          const response = await fetch(`/api/rides/${rideId}`);
+          if (!response.ok) continue;
+          const rideData = await response.json();
+          const ride = rideData.ride;
+          const dataPoints = rideData.dataPoints || [];
+          if (dataPoints.length === 0) {
+            // Add a row with ride info, blank data point fields
+            csvRows.push([
+              escapeCSV(ride.rideId),
+              escapeCSV(new Date(ride.startTime).toISOString()),
+              escapeCSV(ride.duration || 0),
+              '', '', '', ''
+            ].join(','));
+          } else {
+            dataPoints.forEach(point => {
+              csvRows.push([
+                escapeCSV(ride.rideId),
+                escapeCSV(new Date(ride.startTime).toISOString()),
+                escapeCSV(ride.duration || 0),
+                escapeCSV(new Date(point.timestamp).toISOString()),
+                escapeCSV(point.latitude),
+                escapeCSV(point.longitude),
+                escapeCSV(point.roughnessValue)
+              ].join(','));
+            });
+          }
+        } catch (error) {
+          console.warn(`Error downloading ride ${rideId}:`, error);
+        }
+      }
+      if (csvRows.length === 1) {
+        showError('No ride data available to download.');
+        return;
+      }
+      const csvContent = csvRows.join('\r\n');
+      const blob = new Blob([csvContent], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'selected_rides.csv';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
     // Update statistics based on selected rides
     async function updateStatistics() {
       if (selectedRideIds.size === 0) {
@@ -1202,7 +1268,10 @@
       // Past rides event listeners
       selectAllRidesButton.addEventListener('click', selectAllRides);
       clearAllRidesButton.addEventListener('click', clearAllRides);
-      
+      const downloadSelectedRidesButton = document.getElementById('downloadSelectedRidesButton');
+      if (downloadSelectedRidesButton) {
+        downloadSelectedRidesButton.addEventListener('click', downloadSelectedRides);
+      }
       // Update markers when inputs change
       [startLatInput, startLonInput, endLatInput, endLonInput].forEach(input => {
         input.addEventListener('change', updateMarkersFromInputs);

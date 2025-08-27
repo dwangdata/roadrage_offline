@@ -156,6 +156,21 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
 }
 
 // API Routes
+// Clear all data in the database
+app.post('/api/clear-database', (req, res) => {
+  db.serialize(() => {
+    db.run('DELETE FROM ride_data_points', (err) => {
+      if (err) return res.status(500).json({ error: err.message });
+      db.run('DELETE FROM rides', (err) => {
+        if (err) return res.status(500).json({ error: err.message });
+        db.run('DELETE FROM roughness_map', (err) => {
+          if (err) return res.status(500).json({ error: err.message });
+          res.json({ message: 'All data cleared from database.' });
+        });
+      });
+    });
+  });
+});
 
 // Session management endpoints
 app.get('/api/session/status', (req, res) => {
@@ -312,31 +327,18 @@ app.post('/api/rides/:id/datapoints', (req, res) => {
 // Update roughness map (internal function)
 function updateRoughnessMap(dataPoint) {
   const geoId = getGeoId(dataPoint.latitude, dataPoint.longitude);
-  
-  db.get(`SELECT * FROM roughness_map WHERE geoId = ?`, [geoId], (err, existing) => {
+  // Use UPSERT to avoid UNIQUE constraint errors
+  db.run(`
+    INSERT INTO roughness_map (geoId, latitude, longitude, roughnessValue, lastUpdated, dataPointCount, avgRoughness)
+    VALUES (?, ?, ?, ?, ?, 1, ?)
+    ON CONFLICT(geoId) DO UPDATE SET
+      roughnessValue = excluded.roughnessValue,
+      lastUpdated = excluded.lastUpdated,
+      dataPointCount = roughness_map.dataPointCount + 1,
+      avgRoughness = ((roughness_map.avgRoughness * roughness_map.dataPointCount) + excluded.roughnessValue) / (roughness_map.dataPointCount + 1)
+  `, [geoId, dataPoint.latitude, dataPoint.longitude, dataPoint.roughnessValue, dataPoint.timestamp, dataPoint.roughnessValue], (err) => {
     if (err) {
-      console.error('Error checking roughness map:', err);
-      return;
-    }
-    
-    if (existing) {
-      // Update existing point with weighted average
-      const newCount = existing.dataPointCount + 1;
-      const newAvgRoughness = ((existing.avgRoughness * existing.dataPointCount) + dataPoint.roughnessValue) / newCount;
-      
-      db.run(`
-        UPDATE roughness_map 
-        SET roughnessValue = ?, lastUpdated = ?, dataPointCount = ?, avgRoughness = ?
-        WHERE geoId = ?
-      `, [dataPoint.roughnessValue, dataPoint.timestamp, newCount, newAvgRoughness, geoId]);
-    } else {
-      // Create new point
-      db.run(`
-        INSERT INTO roughness_map 
-        (geoId, latitude, longitude, roughnessValue, lastUpdated, dataPointCount, avgRoughness)
-        VALUES (?, ?, ?, ?, ?, 1, ?)
-      `, [geoId, dataPoint.latitude, dataPoint.longitude, dataPoint.roughnessValue, 
-          dataPoint.timestamp, dataPoint.roughnessValue]);
+      console.error('Error upserting roughness map:', err);
     }
   });
 }
